@@ -1,0 +1,493 @@
+@import url("https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700&family=Assistant:wght@400;600;700&family=Noto+Rashi+Hebrew:wght@400;600&family=Noto+Serif+Hebrew:wght@400;600&display=swap");
+
+:root {
+  --bg-0: #f5f0e4;
+  --bg-1: #f2dfc7;
+  --bg-2: #d9e7f0;
+  --paper: #fffdf8;
+  --paper-strong: #ffffff;
+  --ink: #1f2430;
+  --muted: #5f6776;
+  --brand: #a4472f;
+  --brand-2: #1f5f7a;
+  --line: #dfd3bd;
+  --shadow: 0 14px 40px rgba(57, 41, 23, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: "Assistant", "Arial", sans-serif;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(1200px 500px at 12% -8%, #f8d7a6 0%, transparent 58%),
+    radial-gradient(1000px 450px at 84% -6%, #b8d5e8 0%, transparent 56%),
+    linear-gradient(160deg, var(--bg-0) 0%, #f8f5ee 44%, #f4f0e6 100%);
+}
+
+.topbar {
+  margin: 16px 16px 0;
+  padding: 18px 22px;
+  border: 1px solid rgba(223, 211, 189, 0.85);
+  border-radius: 18px;
+  background: linear-gradient(110deg, rgba(255, 252, 246, 0.93) 0%, rgba(247, 239, 225, 0.86) 58%, rgba(236, 244, 248, 0.9) 100%);
+  box-shadow: var(--shadow);
+}
+
+.topbar h1 {
+  margin: 0;
+  font-family: "Frank Ruhl Libre", serif;
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.topbar p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.98rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 1.9fr 1fr;
+  grid-template-rows: auto minmax(0, 1fr) 260px;
+  grid-template-areas:
+    "controls controls controls"
+    "commentary text right"
+    "genizah genizah right";
+  gap: 12px;
+  padding: 14px 16px 16px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.panel {
+  background: linear-gradient(180deg, var(--paper-strong) 0%, var(--paper) 100%);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 8px 26px rgba(74, 51, 25, 0.09);
+}
+
+.panel h2 {
+  margin: 0 0 8px;
+  font-family: "Frank Ruhl Libre", serif;
+  font-size: 1.45rem;
+  line-height: 1.12;
+  letter-spacing: 0.2px;
+}
+
+.controls-panel {
+  grid-area: controls;
+}
+
+.commentary-panel {
+  grid-area: commentary;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.text-panel {
+  grid-area: text;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.right-stack {
+  grid-area: right;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 660px;
+}
+
+.genizah-panel {
+  grid-area: genizah;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.genizah-panel .scroll-region {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}
+
+.right-stack .panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.controls-panel {
+  background: linear-gradient(100deg, #fff8ec 0%, #f6efe2 55%, #eef6fa 100%);
+}
+
+.panel-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.panel-title-row a {
+  color: var(--brand-2);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.panel-title-row a:hover {
+  text-decoration: underline;
+}
+
+.text-panel .panel-title-row,
+.text-panel #textMeta {
+  display: none;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.controls label {
+  font-weight: 700;
+  color: #3f433f;
+}
+
+select,
+input,
+button {
+  font-family: "Assistant", sans-serif;
+  font-size: 0.95rem;
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+
+select,
+input {
+  min-width: 168px;
+  border: 1px solid #d8cab0;
+  background: #fffef9;
+  color: #232734;
+}
+
+button {
+  border: 1px solid transparent;
+  background: linear-gradient(120deg, var(--brand) 0%, #b05c3c 100%);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(164, 71, 47, 0.24);
+}
+
+button:hover {
+  filter: brightness(0.96);
+}
+
+.genizah-auth-form {
+  margin-top: 10px;
+  border-top: 1px dashed #d7c8ae;
+  padding-top: 10px;
+}
+
+.auth-label {
+  font-weight: 700;
+  color: #294c5f;
+}
+
+.auth-status {
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.auth-status.connected {
+  color: #1f5f7a;
+}
+
+#genizahCookie {
+  min-width: 320px;
+}
+
+.status,
+.text-meta {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.text-panel {
+  min-height: 660px;
+  background: linear-gradient(180deg, #fffaf1 0%, #fff 100%);
+}
+
+.segments {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-left: 4px;
+}
+
+.fluent-text {
+  direction: rtl;
+  text-align: right;
+  line-height: 1.95;
+  font-size: 1.22rem;
+  font-family: "Frank Ruhl Libre", "Times New Roman", serif;
+  background: #fff;
+  border: 1px solid #e7dbc6;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.sentence {
+  display: inline;
+  padding: 2px 3px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.sentence:hover {
+  background: #f4e2c6;
+  box-shadow: 0 0 0 1px rgba(197, 136, 74, 0.26);
+}
+
+.sage-mention {
+  border-bottom: 1px dotted rgba(31, 95, 122, 0.75);
+  cursor: help;
+  position: relative;
+}
+
+.sage-mention:hover {
+  color: #1a5871;
+}
+
+.sage-tooltip-floating {
+  position: fixed;
+  z-index: 9999;
+  min-width: 220px;
+  max-width: 320px;
+  white-space: normal;
+  background: #1f2430;
+  color: #fff;
+  border-radius: 10px;
+  padding: 7px 9px;
+  font-family: "Assistant", sans-serif;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  display: none;
+}
+
+.sentence.locked {
+  background: #ebcda1;
+  box-shadow: 0 0 0 1px rgba(146, 92, 41, 0.38);
+}
+
+#clearSelectionBtn {
+  margin-bottom: 8px;
+  background: linear-gradient(120deg, var(--brand-2) 0%, #2d7696 100%);
+  box-shadow: 0 6px 16px rgba(31, 95, 122, 0.22);
+  display: none;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.chip {
+  border: 1px solid #d8c9b2;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.79rem;
+  color: #413b2f;
+  background: linear-gradient(180deg, #fff7ea 0%, #f7ecda 100%);
+}
+
+.scroll-region {
+  height: 540px;
+  overflow-y: auto;
+  padding-left: 6px;
+  display: grid;
+  gap: 8px;
+}
+
+.commentary-panel .scroll-region {
+  height: 360px;
+}
+
+.right-stack .scroll-region {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}
+
+.ref-card {
+  background: linear-gradient(180deg, #fff 0%, #fffaf2 100%);
+  border: 1px solid #e5d8c2;
+  border-radius: 12px;
+  padding: 9px;
+  box-shadow: 0 4px 14px rgba(68, 52, 28, 0.08);
+}
+
+.genizah-compare {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
+  align-items: stretch;
+}
+
+.genizah-witness {
+  min-width: 260px;
+  max-width: 300px;
+  background: #f8f9fb;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.genizah-witness.is-base {
+  background: linear-gradient(180deg, #fff7e3 0%, #fff3db 100%);
+  border-color: #e7cc98;
+}
+
+.genizah-witness .ref-title::after {
+  content: "";
+}
+
+.genizah-witness.is-base .ref-title::after {
+  content: " (נוסח בסיס)";
+  color: #8a5b13;
+  font-weight: 700;
+}
+
+.genizah-diff-word {
+  color: #c52f2f;
+  font-weight: 700;
+}
+
+.genizah-witness .ref-text {
+  flex: 1;
+  min-height: 0;
+  max-height: 160px;
+  overflow-y: auto;
+  padding-left: 4px;
+}
+
+.ref-title {
+  margin: 0 0 6px;
+  color: var(--brand-2);
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.ref-text,
+.quote-box {
+  margin: 0;
+  direction: rtl;
+  text-align: right;
+  line-height: 1.6;
+}
+
+.commentary-panel .ref-text,
+.commentary-panel .quote-box {
+  font-family: "Noto Rashi Hebrew", "Rashi Script MT", "David Libre", serif;
+  font-size: 1.03rem;
+}
+
+.halakha-panel .ref-text,
+.tanakh-panel .ref-text {
+  font-family: "Frank Ruhl Libre", serif;
+}
+
+.tanakh-panel .ref-text {
+  font-family: "Noto Serif Hebrew", "SBL Hebrew", "Ezra SIL", "Frank Ruhl Libre", serif;
+  line-height: 1.75;
+}
+
+.rashi-piece {
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px dashed #dbc8ac;
+}
+
+.rashi-piece:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.rashi-piece strong {
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.subhead {
+  margin: 10px 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #3c414d;
+}
+
+.quote-box {
+  min-height: 150px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: linear-gradient(180deg, #fff 0%, #fffaf2 100%);
+  border: 1px solid #e5d8c2;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+@media (max-width: 1280px) {
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    grid-template-areas: none;
+    overflow-y: auto;
+  }
+
+  .commentary-panel,
+  .text-panel,
+  .right-stack {
+    grid-column: auto;
+  }
+
+  .right-stack {
+    min-height: 0;
+  }
+
+  .scroll-region {
+    height: 360px;
+  }
+
+  .text-panel {
+    min-height: 500px;
+  }
+}

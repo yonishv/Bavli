@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>מציג תלמוד מורחב</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="layout">
+      <section class="panel controls-panel">
+        <form id="loadForm" class="controls">
+          <label for="tractateSelect">מסכת</label>
+          <select id="tractateSelect" name="tractate"></select>
+
+          <label for="dafSelect">דף</label>
+          <select id="dafSelect" name="daf"></select>
+        </form>
+        <form id="genizahLoginForm" class="controls genizah-auth-form" autocomplete="off">
+          <span class="auth-label">התחברות להכי גרסינן</span>
+          <label for="genizahUsername">משתמש</label>
+          <input id="genizahUsername" name="username" type="text" />
+          <label for="genizahPassword">סיסמה</label>
+          <input id="genizahPassword" name="password" type="password" />
+          <button id="genizahLoginBtn" type="submit">התחבר</button>
+          <label for="genizahCookie">Cookie</label>
+          <input id="genizahCookie" name="cookie" type="text" placeholder="ASP.NET_SessionId=...; ..." />
+          <button id="genizahCookieBtn" type="button">הדבק Cookie</button>
+          <span id="genizahAuthStatus" class="auth-status">לא מחובר</span>
+        </form>
+        <p id="status" class="status">מוכן.</p>
+      </section>
+
+      <section class="panel commentary-panel">
+        <h2>מפרשים לתלמוד</h2>
+        <p class="text-meta">רחף מעל משפט כדי לראות מפרשים. לחיצה על משפט מקבעת את הרשימה.</p>
+        <button id="clearSelectionBtn" type="button">נקה בחירה</button>
+        <div id="commentaryCounts" class="chips"></div>
+        <div id="commentaryList" class="scroll-region">רחף מעל משפט בגמרא כדי לראות פירושים.</div>
+        <h3 class="subhead">מובאה מלאה מהפירוש</h3>
+        <div id="commentaryQuote" class="quote-box">רחף מעל אחד הפירושים ברשימה כדי להציג את הטקסט המלא.</div>
+      </section>
+
+      <section class="panel text-panel">
+        <div class="panel-title-row">
+          <h2 id="dafTitle">טקסט הגמרא</h2>
+          <a id="openSefaria" href="#" target="_blank" rel="noreferrer">פתח בספריא</a>
+        </div>
+        <div id="textMeta" class="text-meta"></div>
+        <div id="segments" class="segments"></div>
+      </section>
+
+      <section class="right-stack">
+        <section class="panel halakha-panel">
+          <h2>הלכה ממשנה תורה לרמב״ם</h2>
+          <div id="halakhaList" class="scroll-region">רחף מעל משפט בגמרא כדי לראות הלכה רלוונטית.</div>
+        </section>
+
+        <section class="panel tanakh-panel">
+          <h2>פסוקים מהתנ״ך המצוטטים בגמרא</h2>
+          <div id="tanakhList" class="scroll-region">טוען פסוקים...</div>
+        </section>
+      </section>
+
+      <section class="panel genizah-panel">
+        <h2>חילופי נוסח (הכי גרסינן)</h2>
+        <div id="genizahList" class="scroll-region">טוען חילופי נוסח...</div>
+      </section>
+    </main>
+
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
