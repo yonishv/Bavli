@@ -90,6 +90,45 @@ body {
   letter-spacing: 0.2px;
 }
 
+.panel-toggle {
+  width: 100%;
+  text-align: right;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0 0 8px;
+  font-family: "Frank Ruhl Libre", serif;
+  font-size: 1.45rem;
+  line-height: 1.12;
+  letter-spacing: 0.2px;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.panel-toggle::after {
+  content: "▾";
+  font-family: "Assistant", sans-serif;
+  font-size: 1.1rem;
+  color: var(--muted);
+  transform-origin: center;
+  transition: transform 160ms ease;
+}
+
+.panel.is-collapsed .panel-toggle::after {
+  transform: rotate(-90deg);
+}
+
+.panel-body {
+  min-height: 0;
+  display: block;
+}
+
+.panel.is-collapsed .panel-body {
+  display: none;
+}
+
 .controls-panel {
   grid-area: controls;
 }
@@ -537,6 +576,11 @@ button.chip:disabled {
       "right";
   }
 
+  /* Collapsed by default on mobile (except Gemara). */
+  .panel-toggle {
+    cursor: pointer;
+  }
+
   /* On phones, nested scroll areas feel bad. Use page-level scrolling instead. */
   body {
     overflow: auto;
@@ -572,6 +616,10 @@ button.chip:disabled {
   }
 
   .panel h2 {
+    font-size: 1.25rem;
+  }
+
+  .panel-toggle {
     font-size: 1.25rem;
   }
 

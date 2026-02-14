@@ -32,9 +32,11 @@
       </section>
 
       <section class="panel commentary-panel">
-        <h2>מפרשים לתלמוד</h2>
-        <div id="commentaryCounts" class="chips"></div>
-        <div id="commentaryList" class="scroll-region">רחף מעל משפט בגמרא כדי לראות פירושים.</div>
+        <button class="panel-toggle" type="button" data-collapse-panel="commentary">מפרשים לתלמוד</button>
+        <div class="panel-body">
+          <div id="commentaryCounts" class="chips"></div>
+          <div id="commentaryList" class="scroll-region">רחף מעל משפט בגמרא כדי לראות פירושים.</div>
+        </div>
       </section>
 
       <section class="panel text-panel">
@@ -48,13 +50,17 @@
 
       <section class="right-stack">
         <section class="panel halakha-panel">
-          <h2>עין משפט</h2>
-          <div id="halakhaList" class="scroll-region">רחף מעל משפט בגמרא כדי לראות הפניות הלכתיות רלוונטיות.</div>
+          <button class="panel-toggle" type="button" data-collapse-panel="ein-mishpat">עין משפט</button>
+          <div class="panel-body">
+            <div id="halakhaList" class="scroll-region">רחף מעל משפט בגמרא כדי לראות הפניות הלכתיות רלוונטיות.</div>
+          </div>
         </section>
 
       <section class="panel tanakh-panel">
-          <h2>תורה אור</h2>
-          <div id="tanakhList" class="scroll-region">טוען פסוקים...</div>
+          <button class="panel-toggle" type="button" data-collapse-panel="torah-or">תורה אור</button>
+          <div class="panel-body">
+            <div id="tanakhList" class="scroll-region">טוען פסוקים...</div>
+          </div>
         </section>
       </section>
 

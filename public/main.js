@@ -23,6 +23,37 @@ const sageTooltipEl = document.createElement("div");
 sageTooltipEl.className = "sage-tooltip-floating";
 document.body.appendChild(sageTooltipEl);
 
+const isMobileUi = window.matchMedia && window.matchMedia("(max-width: 820px)").matches;
+
+function initMobileCollapsibles() {
+  if (!isMobileUi) return;
+
+  const collapsiblePanels = [
+    document.querySelector(".commentary-panel"),
+    document.querySelector(".halakha-panel"),
+    document.querySelector(".tanakh-panel"),
+  ].filter(Boolean);
+
+  // Collapse everything except the main Gemara panel.
+  for (const panel of collapsiblePanels) {
+    panel.classList.add("is-collapsed");
+    const btn = panel.querySelector(".panel-toggle");
+    if (btn instanceof HTMLButtonElement) {
+      btn.setAttribute("aria-expanded", "false");
+    }
+  }
+
+  document.querySelectorAll(".panel-toggle[data-collapse-panel]").forEach((btn) => {
+    if (!(btn instanceof HTMLButtonElement)) return;
+    btn.addEventListener("click", () => {
+      const panel = btn.closest(".panel");
+      if (!(panel instanceof HTMLElement)) return;
+      const collapsed = panel.classList.toggle("is-collapsed");
+      btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    });
+  });
+}
+
 let currentRef = "Berakhot.2a";
 let lockedSegmentIndex = null;
 let segmentCommentaryMap = new Map();
@@ -1384,7 +1415,7 @@ async function renderPanelsForSegment(segmentIndex, pinned = false) {
     commentaryListEl.textContent = "רחף מעל משפט בגמרא כדי לראות פירושים.";
     halakhaListEl.textContent = "רחף מעל משפט בגמרא כדי לראות הלכה רלוונטית.";
     commentaryCountsEl.innerHTML = "";
-    renderGenizahForSegment(null);
+    if (!isMobileUi) renderGenizahForSegment(null);
     return;
   }
 
@@ -1397,7 +1428,7 @@ async function renderPanelsForSegment(segmentIndex, pinned = false) {
     renderRefCards(commentaryListEl, filteredCommentaryRefs, "commentary"),
     renderRefCards(halakhaListEl, halakhaRefs, "halakha"),
   ]);
-  renderGenizahForSegment(segmentIndex);
+  if (!isMobileUi) renderGenizahForSegment(segmentIndex);
 }
 
 async function loadRef(rawRef) {
@@ -1433,7 +1464,7 @@ async function loadRef(rawRef) {
   renderFluentText(ref, segments);
   await renderPanelsForSegment(null, false);
   await renderTanakhPanel(pageTanakhRefs);
-  await loadGenizahForRef(ref);
+  if (!isMobileUi) await loadGenizahForRef(ref);
 
   const parts = parseRefParts(ref);
   if (parts && parts.tractate in TRACTATE_MAX_DAF) {
@@ -1518,6 +1549,7 @@ segmentsEl.addEventListener("mouseout", (event) => {
 });
 
 genizahLoginForm.addEventListener("submit", (event) => {
+  if (isMobileUi) return;
   event.preventDefault();
   const username = String(genizahUsernameEl.value || "").trim();
   const password = String(genizahPasswordEl.value || "");
@@ -1547,6 +1579,7 @@ genizahLoginForm.addEventListener("submit", (event) => {
 });
 
 genizahCookieBtn.addEventListener("click", () => {
+  if (isMobileUi) return;
   const cookie = String(genizahCookieEl.value || "").trim();
   if (!cookie) {
     setGenizahAuthStatus("Paste a cookie value first", false);
@@ -1575,7 +1608,8 @@ genizahCookieBtn.addEventListener("click", () => {
 populateTractateOptions();
 tractateSelect.value = "Berakhot";
 populateDafOptions("Berakhot", "2a");
-void refreshGenizahAuthStatus();
+if (!isMobileUi) void refreshGenizahAuthStatus();
+initMobileCollapsibles();
 
 loadRef(currentRef).catch((error) => {
   setStatus(`טעינה ראשונית נכשלה: ${error.message}`);
