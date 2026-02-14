@@ -14,10 +14,8 @@ const openSefariaEl = document.getElementById("openSefaria");
 const textMetaEl = document.getElementById("textMeta");
 const segmentsEl = document.getElementById("segments");
 
-const clearSelectionBtn = document.getElementById("clearSelectionBtn");
 const commentaryCountsEl = document.getElementById("commentaryCounts");
 const commentaryListEl = document.getElementById("commentaryList");
-const commentaryQuoteEl = document.getElementById("commentaryQuote");
 const genizahListEl = document.getElementById("genizahList");
 const halakhaListEl = document.getElementById("halakhaList");
 const tanakhListEl = document.getElementById("tanakhList");
@@ -30,9 +28,11 @@ let lockedSegmentIndex = null;
 let segmentCommentaryMap = new Map();
 let segmentHalakhaMap = new Map();
 let pageTanakhRefs = [];
+let pageMeiriRefs = [];
 let genizahGroups = [];
 let currentSegments = [];
 let genizahSegmentToGroup = new Map();
+let commentaryCategory = "rt"; // rt | rishonim | acharonim | meiri
 let commentaryToken = 0;
 let halakhaToken = 0;
 let tanakhToken = 0;
@@ -178,6 +178,20 @@ function canonicalRef(rawRef) {
     .trim();
 }
 
+function refMatchesBaseDaf(ref, baseRef) {
+  // Ensure the linked source is actually on this daf/amud.
+  // Example: baseRef="Berakhot.2a" => canonical "berakhot 2a"
+  // Reject: "Meiri on Berakhot 14" when base is "Berakhot 2a".
+  const base = canonicalRef(baseRef);
+  const src = canonicalRef(ref);
+  if (!base || !src) return false;
+  return src.includes(base);
+}
+
+function isMeiriRef(ref) {
+  return canonicalRef(ref).startsWith("meiri on ");
+}
+
 function safeHtml(text) {
   return String(text || "")
     .replace(/&/g, "&amp;")
@@ -207,6 +221,19 @@ function normalizeDisplayText(text) {
 
 function escapeRegExp(text) {
   return String(text || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function segmentIndexFromRef(ref, baseRef) {
+  // Extract the segment index from a source ref when it is explicit, e.g.:
+  // "Rashi on Berakhot 2a:3" -> 3 (for baseRef "Berakhot.2a")
+  const src = canonicalRef(ref);
+  const base = canonicalRef(baseRef);
+  if (!src || !base) return null;
+  const re = new RegExp(`${escapeRegExp(base)}:(\\d+)`, "i");
+  const m = src.match(re);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 function buildHebrewFlexiblePattern(text) {
@@ -421,9 +448,108 @@ function isSteinsaltzRef(ref) {
 
 function commentaryPriority(ref) {
   const n = canonicalRef(ref);
+  // Prefer Rashi, then Tosafot, then the rest.
+  // Keep this strict: only actual "Rashi on ..." and "Tosafot on ...".
+  // Do NOT include "Piskei Tosafot" or "Tosafot Yom Tov" in the Tosafot bucket.
   if (n.startsWith("rashi on ")) return 0;
   if (n.startsWith("tosafot on ")) return 1;
   return 2;
+}
+
+function isStrictRashiRef(ref) {
+  return canonicalRef(ref).startsWith("rashi on ");
+}
+
+function isStrictTosafotRef(ref) {
+  return canonicalRef(ref).startsWith("tosafot on ");
+}
+
+function commentaryCategoryOfRef(ref) {
+  const n = canonicalRef(ref);
+  if (isStrictRashiRef(ref) || isStrictTosafotRef(ref)) return "rt";
+
+  if (n.startsWith("meiri on ")) return "meiri";
+
+  // Rishonim (11th–15th c.) – name-based heuristic for Sefaria refs.
+  const rishonimStarts = [
+    "rif on ",
+    "rosh on ",
+    "rabbeinu chananel on ",
+    "ramban on ",
+    "rashba on ",
+    "ritva on ",
+    "ran on ",
+    "meiri on ",
+    "tosafot rid on ",
+    "mordechai on ",
+    "nimmukei yosef on ",
+    "piskei tosafot on ",
+    "or zarua on ",
+  ];
+  if (rishonimStarts.some((p) => n.startsWith(p))) return "rishonim";
+
+  // Acharonim (16th c. and later)
+  const acharonimStarts = [
+    "maharsha on ",
+    "maharam on ",
+    "maharam shif on ",
+    "pnei yehoshua on ",
+    "korban netanel on ",
+    "hidushei agadot on ",
+    "hidushei halakhot on ",
+    "chiddushei chatam sofer on ",
+    "ben yehoyada on ",
+    "gilyonei hashas on ",
+  ];
+  if (acharonimStarts.some((p) => n.startsWith(p))) return "acharonim";
+
+  // Default bucket for unknowns.
+  return "acharonim";
+}
+
+function filterCommentaryRefsByCategory(segmentRefs, category, meiriRefs) {
+  if (category === "meiri") return Array.isArray(meiriRefs) ? meiriRefs : [];
+  if (!Array.isArray(segmentRefs) || !segmentRefs.length) return [];
+  return segmentRefs.filter((r) => commentaryCategoryOfRef(r) === category);
+}
+
+function renderCommentaryCategoryChips(segmentRefs, meiriRefs) {
+  const counts = { rt: 0, rishonim: 0, acharonim: 0, meiri: 0 };
+  for (const ref of segmentRefs || []) {
+    const cat = commentaryCategoryOfRef(ref);
+    if (cat in counts) counts[cat] += 1;
+  }
+  counts.meiri = Array.isArray(meiriRefs) ? meiriRefs.length : 0;
+
+  // Auto-fallback if the currently selected category has no refs for this sentence.
+  if (counts[commentaryCategory] === 0) {
+    if (counts.rt) commentaryCategory = "rt";
+    else if (counts.rishonim) commentaryCategory = "rishonim";
+    else if (counts.acharonim) commentaryCategory = "acharonim";
+    else if (counts.meiri) commentaryCategory = "meiri";
+  }
+
+  const chips = [
+    { id: "rt", label: `רש״י ותוספות`, count: counts.rt },
+    { id: "rishonim", label: `ראשונים`, count: counts.rishonim },
+    { id: "acharonim", label: `אחרונים`, count: counts.acharonim },
+    { id: "meiri", label: `מאירי`, count: counts.meiri },
+  ];
+
+  commentaryCountsEl.innerHTML = "";
+  for (const c of chips) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `chip chip-filter${commentaryCategory === c.id ? " active" : ""}`;
+    btn.dataset.cat = c.id;
+    btn.textContent = `${c.label} (${c.count})`;
+    btn.disabled = c.count === 0;
+    btn.addEventListener("click", () => {
+      commentaryCategory = c.id;
+      void renderPanelsForSegment(lockedSegmentIndex || null, Boolean(lockedSegmentIndex));
+    });
+    commentaryCountsEl.appendChild(btn);
+  }
 }
 
 function sortCommentaryRefs(refs) {
@@ -436,7 +562,7 @@ function sortCommentaryRefs(refs) {
 }
 
 function isRashiRef(ref) {
-  return canonicalRef(ref).startsWith("rashi on ");
+  return isStrictRashiRef(ref);
 }
 
 function rashiGroupKey(ref) {
@@ -452,7 +578,8 @@ function rashiOrderNumber(ref) {
 }
 
 function buildCommentaryItems(refs) {
-  const singles = [];
+  const tosafotSingles = [];
+  const otherSingles = [];
   const rashiGroups = new Map();
 
   for (const ref of sortCommentaryRefs(refs)) {
@@ -460,8 +587,10 @@ function buildCommentaryItems(refs) {
       const key = rashiGroupKey(ref);
       if (!rashiGroups.has(key)) rashiGroups.set(key, []);
       rashiGroups.get(key).push(ref);
+    } else if (commentaryPriority(ref) === 1) {
+      tosafotSingles.push({ kind: "single", refs: [ref] });
     } else {
-      singles.push({ kind: "single", refs: [ref] });
+      otherSingles.push({ kind: "single", refs: [ref] });
     }
   }
 
@@ -471,7 +600,8 @@ function buildCommentaryItems(refs) {
     rashiItems.push({ kind: "rashi-group", key, refs: ordered });
   }
 
-  return [...rashiItems, ...singles];
+  // Strict ordering: Rashi -> Tosafot -> other commentaries.
+  return [...rashiItems, ...tosafotSingles, ...otherSingles];
 }
 
 function flattenTextLeaves(value, out = []) {
@@ -716,6 +846,17 @@ function isMishnehTorahRef(ref) {
   );
 }
 
+function isHalakhahLink(linkItem) {
+  const candidates = [linkItem?.category, linkItem?.linkType, linkItem?.type]
+    .map((x) => String(x || "").toLowerCase());
+  return candidates.some((x) =>
+    x.includes("halakh") ||
+    x.includes("halacha") ||
+    x.includes("הלכה") ||
+    x.includes("הלכות")
+  );
+}
+
 function isTanakhLink(linkItem, sourceRef) {
   const candidates = [linkItem?.category, linkItem?.linkType, linkItem?.type]
     .map((x) => String(x || "").toLowerCase());
@@ -735,6 +876,7 @@ function buildReferenceMaps(baseRef, links, segmentCount) {
   }
 
   const tanakhSet = new Set();
+  const meiriSet = new Set();
 
   for (const link of links) {
     const sourceRef = extractOtherRef(link, baseRef);
@@ -744,21 +886,39 @@ function buildReferenceMaps(baseRef, links, segmentCount) {
 
     const anchors = extractAnchorRefs(link, baseRef);
     let segmentIdx = null;
-    for (let i = 1; i <= segmentCount; i += 1) {
-      const prefix = segmentPrefix(baseRef, i);
-      if (anchors.some((r) => canonicalRef(r).startsWith(prefix))) {
-        segmentIdx = i;
-        break;
+
+    // Prefer explicit segment indexes in the source ref itself when available.
+    const parsedFromSource = segmentIndexFromRef(sourceRef, baseRef);
+    if (parsedFromSource && parsedFromSource <= segmentCount) {
+      segmentIdx = parsedFromSource;
+    } else {
+      // Otherwise infer from anchor refs. If multiple anchors match, prefer the most specific (highest index).
+      const matches = [];
+      for (let i = 1; i <= segmentCount; i += 1) {
+        const prefix = segmentPrefix(baseRef, i);
+        if (anchors.some((r) => canonicalRef(r).startsWith(prefix))) {
+          matches.push(i);
+        }
       }
+      if (matches.length) segmentIdx = Math.max(...matches);
     }
 
     if (!segmentIdx) continue;
 
     if (isCommentaryLink(link, sourceRef)) {
+      if (!refMatchesBaseDaf(sourceRef, baseRef)) continue;
+
+      // Meiri often spans multiple segments; show it in a dedicated tab at daf-level.
+      if (isMeiriRef(sourceRef)) {
+        meiriSet.add(sourceRef);
+        continue;
+      }
+
       commentarySets.get(segmentIdx).add(sourceRef);
     }
 
-    if (isMishnehTorahRef(sourceRef)) {
+    // "Ein Mishpat": use Sefaria's halakhic links (not only Rambam).
+    if (isHalakhahLink(link) || isMishnehTorahRef(sourceRef)) {
       halakhaSets.get(segmentIdx).add(sourceRef);
     }
   }
@@ -770,7 +930,7 @@ function buildReferenceMaps(baseRef, links, segmentCount) {
     halakhaMap.set(i, [...halakhaSets.get(i)]);
   }
 
-  return { commentaryMap, halakhaMap, tanakhRefs: [...tanakhSet] };
+  return { commentaryMap, halakhaMap, tanakhRefs: [...tanakhSet], meiriRefs: [...meiriSet] };
 }
 
 async function fetchJson(url) {
@@ -1135,7 +1295,7 @@ async function renderRefCards(container, refs, tokenType) {
   if (!refs.length) {
     container.textContent = tokenType === "commentary"
       ? "לא נמצאו מפרשים למשפט זה."
-      : "לא נמצאה הלכה ממשנה תורה לרמב״ם למשפט זה.";
+      : "לא נמצאו הפניות בעין משפט למשפט זה.";
     return;
   }
 
@@ -1182,7 +1342,7 @@ async function renderRefCards(container, refs, tokenType) {
       card.dataset.ref = main.ref;
       card.innerHTML = `
         <p class="ref-title">${safeHtml(main.displayRef || main.ref)}</p>
-        <p class="ref-text">${safeHtml(tokenType === "commentary" ? main.snippet : main.full)}</p>
+        <p class="ref-text">${safeHtml(main.full)}</p>
       `;
     }
 
@@ -1219,44 +1379,22 @@ async function renderTanakhPanel(refs) {
   }
 }
 
-async function showFullCommentaryQuote(ref) {
-  commentaryQuoteEl.textContent = "טוען מובאה מלאה...";
-  const text = await getReferenceText(ref);
-  commentaryQuoteEl.innerHTML = `
-    <p class="ref-title">${safeHtml(text.displayRef || text.ref)}</p>
-    <p class="ref-text">${safeHtml(text.full)}</p>
-  `;
-}
-
 async function renderPanelsForSegment(segmentIndex, pinned = false) {
-  commentaryCountsEl.innerHTML = "";
-
   if (!segmentIndex) {
     commentaryListEl.textContent = "רחף מעל משפט בגמרא כדי לראות פירושים.";
     halakhaListEl.textContent = "רחף מעל משפט בגמרא כדי לראות הלכה רלוונטית.";
-    commentaryQuoteEl.textContent = "רחף מעל אחד הפירושים ברשימה כדי להציג את הטקסט המלא.";
-    clearSelectionBtn.style.display = "none";
+    commentaryCountsEl.innerHTML = "";
     renderGenizahForSegment(null);
     return;
   }
 
-  clearSelectionBtn.style.display = pinned ? "inline-block" : "none";
-
   const commentaryRefs = sortCommentaryRefs(segmentCommentaryMap.get(segmentIndex) || []);
   const halakhaRefs = segmentHalakhaMap.get(segmentIndex) || [];
-
-  const chip1 = document.createElement("span");
-  chip1.className = "chip";
-  chip1.textContent = `מפרשים: ${commentaryRefs.length}`;
-  commentaryCountsEl.appendChild(chip1);
-
-  const chip2 = document.createElement("span");
-  chip2.className = "chip";
-  chip2.textContent = `משנה תורה: ${halakhaRefs.length}`;
-  commentaryCountsEl.appendChild(chip2);
+  renderCommentaryCategoryChips(commentaryRefs, pageMeiriRefs);
+  const filteredCommentaryRefs = filterCommentaryRefsByCategory(commentaryRefs, commentaryCategory, pageMeiriRefs);
 
   await Promise.all([
-    renderRefCards(commentaryListEl, commentaryRefs, "commentary"),
+    renderRefCards(commentaryListEl, filteredCommentaryRefs, "commentary"),
     renderRefCards(halakhaListEl, halakhaRefs, "halakha"),
   ]);
   renderGenizahForSegment(segmentIndex);
@@ -1283,6 +1421,7 @@ async function loadRef(rawRef) {
   segmentCommentaryMap = maps.commentaryMap;
   segmentHalakhaMap = maps.halakhaMap;
   pageTanakhRefs = maps.tanakhRefs;
+  pageMeiriRefs = maps.meiriRefs || [];
 
   lockedSegmentIndex = null;
   genizahSegmentToGroup = new Map();
@@ -1347,9 +1486,10 @@ segmentsEl.addEventListener("click", (event) => {
   if (!(sentenceEl instanceof HTMLElement)) return;
   const segmentIndex = Number(sentenceEl.dataset.segment);
   if (!Number.isFinite(segmentIndex)) return;
-  lockedSegmentIndex = segmentIndex;
+  // Toggle lock: click again to unlock (since we removed the "clear" button).
+  lockedSegmentIndex = lockedSegmentIndex === segmentIndex ? null : segmentIndex;
   highlightLockedSentence();
-  void renderPanelsForSegment(segmentIndex, true);
+  void renderPanelsForSegment(lockedSegmentIndex || segmentIndex, Boolean(lockedSegmentIndex));
 });
 
 segmentsEl.addEventListener("mousemove", (event) => {
@@ -1375,22 +1515,6 @@ segmentsEl.addEventListener("mouseout", (event) => {
   if (target.closest(".sage-mention")) {
     hideSageTooltip();
   }
-});
-
-clearSelectionBtn.addEventListener("click", () => {
-  lockedSegmentIndex = null;
-  highlightLockedSentence();
-  void renderPanelsForSegment(null, false);
-});
-
-commentaryListEl.addEventListener("mouseover", (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLElement)) return;
-  const card = target.closest(".ref-card");
-  if (!(card instanceof HTMLElement)) return;
-  const ref = card.dataset.ref;
-  if (!ref) return;
-  void showFullCommentaryQuote(ref);
 });
 
 genizahLoginForm.addEventListener("submit", (event) => {

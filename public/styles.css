@@ -305,13 +305,6 @@ button:hover {
   box-shadow: 0 0 0 1px rgba(146, 92, 41, 0.38);
 }
 
-#clearSelectionBtn {
-  margin-bottom: 8px;
-  background: linear-gradient(120deg, var(--brand-2) 0%, #2d7696 100%);
-  box-shadow: 0 6px 16px rgba(31, 95, 122, 0.22);
-  display: none;
-}
-
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -328,6 +321,32 @@ button:hover {
   background: linear-gradient(180deg, #fff7ea 0%, #f7ecda 100%);
 }
 
+.chip-filter {
+  cursor: pointer;
+}
+
+button.chip {
+  background: linear-gradient(180deg, #fff7ea 0%, #f7ecda 100%);
+  color: #413b2f;
+  border: 1px solid #d8c9b2;
+  box-shadow: none;
+}
+
+button.chip:hover:not(:disabled) {
+  filter: brightness(0.98);
+}
+
+button.chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.chip-filter.active {
+  background: linear-gradient(180deg, #e8f3f8 0%, #d6eaf3 100%);
+  border-color: rgba(31, 95, 122, 0.35);
+  color: #1f5f7a;
+}
+
 .scroll-region {
   height: 540px;
   overflow-y: auto;
@@ -336,8 +355,11 @@ button:hover {
   gap: 8px;
 }
 
+/* Fill available height in the commentary panel (we removed the quote box). */
 .commentary-panel .scroll-region {
-  height: 360px;
+  flex: 1;
+  min-height: 0;
+  height: auto;
 }
 
 .right-stack .scroll-region {
