@@ -29,7 +29,7 @@ body {
   font-family: "Assistant", "Arial", sans-serif;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background:
     radial-gradient(1200px 500px at 12% -8%, #f8d7a6 0%, transparent 58%),
@@ -353,6 +353,7 @@ button.chip:disabled {
   padding-left: 6px;
   display: grid;
   gap: 8px;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Fill available height in the commentary panel (we removed the quote box). */
@@ -490,9 +491,15 @@ button.chip:disabled {
 @media (max-width: 1280px) {
   .layout {
     grid-template-columns: 1fr;
-    grid-template-rows: auto;
-    grid-template-areas: none;
+    grid-template-rows: auto minmax(0, 1fr) auto auto 240px;
+    grid-template-areas:
+      "controls"
+      "text"
+      "commentary"
+      "right"
+      "genizah";
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .commentary-panel,
@@ -506,10 +513,55 @@ button.chip:disabled {
   }
 
   .scroll-region {
-    height: 360px;
+    height: min(46dvh, 420px);
   }
 
   .text-panel {
     min-height: 500px;
+  }
+}
+
+@media (max-width: 820px) {
+  .layout {
+    padding: 10px 10px 12px;
+    gap: 10px;
+  }
+
+  .panel {
+    border-radius: 14px;
+    padding: 10px;
+  }
+
+  .panel h2 {
+    font-size: 1.25rem;
+  }
+
+  .controls {
+    gap: 8px;
+  }
+
+  select,
+  input {
+    min-width: 120px;
+    width: 100%;
+  }
+
+  #genizahCookie {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .segments {
+    max-height: min(52dvh, 520px);
+  }
+
+  .fluent-text {
+    font-size: 1.08rem;
+    line-height: 1.85;
+  }
+
+  .genizah-witness {
+    min-width: 220px;
+    max-width: 260px;
   }
 }
