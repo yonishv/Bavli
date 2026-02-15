@@ -5,8 +5,6 @@ const genizahLoginForm = document.getElementById("genizahLoginForm");
 const genizahUsernameEl = document.getElementById("genizahUsername");
 const genizahPasswordEl = document.getElementById("genizahPassword");
 const genizahLoginBtn = document.getElementById("genizahLoginBtn");
-const genizahCookieEl = document.getElementById("genizahCookie");
-const genizahCookieBtn = document.getElementById("genizahCookieBtn");
 const genizahAuthStatusEl = document.getElementById("genizahAuthStatus");
 const statusEl = document.getElementById("status");
 const dafTitleEl = document.getElementById("dafTitle");
@@ -156,6 +154,7 @@ function setStatus(message) {
 function setGenizahAuthStatus(message, connected = false) {
   genizahAuthStatusEl.textContent = message;
   genizahAuthStatusEl.classList.toggle("connected", connected);
+  genizahLoginForm?.classList?.toggle("connected", connected);
 }
 
 function normalizeRef(rawRef) {
@@ -1543,32 +1542,6 @@ genizahLoginForm.addEventListener("submit", (event) => {
     .finally(() => {
       genizahLoginBtn.disabled = false;
       genizahLoginBtn.textContent = originalBtn;
-    });
-});
-
-genizahCookieBtn.addEventListener("click", () => {
-  const cookie = String(genizahCookieEl.value || "").trim();
-  if (!cookie) {
-    setGenizahAuthStatus("Paste a cookie value first", false);
-    return;
-  }
-
-  const originalBtn = genizahCookieBtn.textContent;
-  genizahCookieBtn.disabled = true;
-  genizahCookieBtn.textContent = "בודק...";
-
-  void postJson("/api/genizah/set-cookie", { cookie })
-    .then(async () => {
-      setGenizahAuthStatus("מחובר (Session)", true);
-      await loadGenizahForRef(currentRef);
-      renderGenizahForSegment(lockedSegmentIndex || null);
-    })
-    .catch((error) => {
-      setGenizahAuthStatus(`Cookie rejected: ${error.message}`, false);
-    })
-    .finally(() => {
-      genizahCookieBtn.disabled = false;
-      genizahCookieBtn.textContent = originalBtn;
     });
 });
 

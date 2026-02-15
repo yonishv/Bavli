@@ -1,0 +1,546 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=windows-1255" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Access-Control-Allow-Credentials" content="*" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Friedberg Jewish Manuscript Society</title>
+    
+    <script src="Scripts/Global/jquery-1.8.3.js" type="text/javascript"></script>
+    <script src="Scripts/Global/jquery-ui-1.9.2.custom.min.js" type="text/javascript" charset="utf-8"></script>
+    
+    <script src="Scripts/Global/jquery.blockUI.js" type="text/javascript"></script>
+    <script src="Scripts/Global/sweetalert2.js" type="text/javascript"></script>
+    <script src="Scripts/Global/promiseES6.min.js" type="text/javascript"></script>
+    <link href="CSS/jquery-ui-1.9.2.custom.min.css" rel="stylesheet" type="text/css" charset="utf-8" />
+    
+    <script type="text/javascript">        
+    
+        document.write('<link href="CSS/PortalIndex.css?v=' + new Date().getDate() + '_' + (new Date().getMonth() + 1) + '_' + new Date().getTime() + '" rel="StyleSheet" type="text/css" \><\/link>');
+        document.write('<script src="SSOConfig.js?v=' + new Date().getDate() + '_' + (new Date().getMonth() + 1) + '_' + new Date().getTime() + '" onload="loadB();" \><\/script>');
+        function loadB() {
+            document.write('<script src="Scripts/General.js?v=' + version + '" onload="loadC();" \><\/script>');
+        }
+        function loadC() {
+            document.write('<script src="Scripts/Globalization/' + selLang + '.js?v=' + version + '" type="text/javascript"><\/script>'); //  ������ ����� ���� ����
+            document.write('<script src="Scripts/Login.js?v=' + version + '" onload="loadD();"\><\/script>');
+        }
+        function loadD() {
+            document.write('<script src="Scripts/index.js?v=' + version + '" \><\/script>');
+            document.write('<script src="Scripts/Global/FJMSToolbar.js?v=' + version + '"\><\/script>');
+            document.write('<link href="CSS/FJMSToolbar.css?v=' + version + '" rel="StyleSheet" type="text/css" \><\/link>');
+            document.write('<link href="CSS/ToolBarStyleSheet.css?v=' + version + '" rel="StyleSheet" type="text/css"\><\/link>');
+            if (selLang == "eng")
+                document.write('<link href="CSS/Eng.css?v=' + version + '" rel="StyleSheet" type="text/css" \><\/link>'); // CSS ������ ���  ��� �����
+        }
+
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) { //����� �� ��������� ����� �������
+            window.location.href = "ResponsivePortal.htm";
+        }
+    
+    </script>
+    <script>
+        var widgetOptionsWithLang = {};
+        widgetOptionsWithLang.he = {
+            apiKey: "c4225c7b-ce7f-41af-a6e2-28b9c680b5b9",
+            snippetId: "kl3ZIfe1IPptnXUSnB9J"
+        };
+        widgetOptionsWithLang.en = {
+            apiKey: "c4225c7b-ce7f-41af-a6e2-28b9c680b5b9",
+            snippetId: "qLKIL1KSB1b0quBwaEXw"
+        };
+       
+//        if ("@lang" == "ar") {
+//            var widgetOptions = widgetOptionsWithLang.ar;
+//        }
+        if (selLang == "eng") {
+            var widgetOptions = widgetOptionsWithLang.en;
+        }
+        else {
+            var widgetOptions = widgetOptionsWithLang.he;
+        }
+
+
+
+        (function (n) { var u = function () { GlassixWidgetClient && typeof GlassixWidgetClient == "function" ? (window.widgetClient = new GlassixWidgetClient(n), widgetClient.attach(), window.glassixWidgetScriptLoaded && window.glassixWidgetScriptLoaded()) : f() }, f = function () { r.src = "https://cdn.glassix.net/clients/widget.1.2.min.js"; r.onload = u; document.body.removeChild(t); i.parentNode.insertBefore(r, i) }, i = document.getElementsByTagName("script")[0], t = document.createElement("script"), r; (t.async = !0, t.type = "text/javascript", t.crossorigin = "anonymous", t.id = "glassix-widget-script", r = t.cloneNode(), t.onload = u, t.src = "https://cdn.glassix.com/clients/widget.1.2.min.js", !document.getElementById(t.id) && document.body) && (i.parentNode.insertBefore(t, i), t.onerror = f) })(widgetOptions)
+     </script>
+    <script type="application/javascript">
+        (function (b, o, n, g, s, r, c) { if (b[s]) return; b[s] = {}; b[s].scriptToken = "Xy04MjMyNzk5OTQ"; r = o.createElement(n); c = o.getElementsByTagName(n)[0]; r.async = 1; r.src = g; r.id = s + n; c.parentNode.insertBefore(r, c); })(window, document, "script", "//cdn.oribi.io/Xy04MjMyNzk5OTQ/oribi.js", "ORIBI");
+    </script>
+
+    <style>
+        #dialog {
+            overflow: hidden;
+        }
+          #glassix-container{
+            display:none;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div id="alertByMovingToAnotherSite" style="display:none;" class="viewMessage"></div>
+
+        <input id="btnChangelang" type="button" class="changelang" onclick="callChangelang()" />
+        <div class="wrapperCon">
+            <input id="Chat" class="portallink" type="button" value="" onclick="openChat()" />
+
+            <input id="ContactUs" name="hebTexts" type="button" value="" onclick="GoToContactUs(selLang)"
+                   class="portallink" />
+
+        </div>
+        <div id="DivFJMSToolBar" class="DivFJMSToolBar">
+        </div>
+        <div id='statAndPr' class="statAndPr">
+            <input id="btnStatist" type="button" class="portallink" value="" onclick="openStatDialog()" /><!--Browsing Statistics-->
+            <!--<div >-->
+            <!--<img class="BrowsingStatisticsBtnImg" src="ImagesFJMS/favicon1.gif" />-->
+            <input type="button" id="pr" class="portallink" value="" onclick="GoToPr()" /><!--Context and Background of the FGP-->
+            <!--</div>-->
+        </div>
+        <div class="wraaperAdmin">
+        </div>
+        <div class="backyad">
+            <img src="ImagesFJMS/logo.png" class="logo_portal" />
+            <div class="Aligncenter">
+                <div class="wraparrowbtn">
+                    <input type="button" class="arrowbtnR" onclick="changeImageTextR()" />
+                    <input type="button" class="arrowbtnL" onclick="changeImageTextL()" />
+                </div>
+                <div class="wrrapeImages">
+                    <div class="changeimage">
+                        <img class="computerFade" src="" alt="" />
+                    </div>
+                    <div class="changeimageNoFade">
+                        <img class="computerNoFade" src="" alt="" />
+                    </div>
+                </div>
+                <!--<div class="changeText">����� ���� ������ ������ �� ����-�� ������� ������ ������ �����, �� �������� ����� �������</div>-->
+                <div id="SSOlogin" class="SSOlogin" style="display: block; direction: rtl;">
+                    <div class="innerWrapper">
+                        <div class="wrapLogin_Institution">
+                            <div id="GoToRegisterMsg">
+                            </div>
+                            <input type="button" id="regHeb" class="LoginBtnHeb" value="" onclick="GoToRegPage(selLang , false)" />
+                            <div class="InstitutionLogWrapper" id="wrapperInstReg">
+                                <input type="button" id="InstRegistration" class="InstitutionBtnHeb" value="" onclick="GoToRegPage(selLang , true)" />
+                            </div>
+                        </div>
+                        <div class="WrapperUserPas">
+                            <span id="GetContact"></span>
+                            <div class="txtPasswordWrapper">
+                                <span></span>
+                                <input type="text" id="txtUserName" placeholder="" onblur="return getPassword()" />
+                                <!--/ username-->
+                            </div>
+                            <div class="txtPasswordWrapperPas">
+                                <span></span>
+                                <input type="password" id="txtPassword" placeholder="" /><!-- / password-->
+                            </div>
+                        </div>
+                        <div id="ForgotPass" class="InstitutionLogWrapper">
+                            <input id="btnForgotPass" type="button" class="ForgotPassBtnHeb" value="" onclick="ForgotPass(selLang)" />
+                        </div>
+                        <div class="wrapperLoginBtn">
+                            <input type="button" class="LoginBtnHeb" id="loginBtn" value="" onclick="loginAsRegUser(selLang)" />
+                            <div id="instDiv" class="instDiv" style="display: none;">
+                                <input type="button" id="LoginInstHeb" class="LoginBtnHeb" value="" onclick="loginAsInstUser(selLang)" />
+                            </div>
+                        </div>
+                        <!--DO NOT COPY TO PRODUCTION!!!-->
+                        <!--<div class="wrapperLoginBtn" id="DebugLogin"><input type ="button" class="LoginBtnEng" value="DEBUG LOGIN"  onclick="tryLogin('miriamg', 'Fgp123', 'eng')"/></div>-->
+                    </div>
+                </div>
+                <div id="GeneralMsg" class="changeText">
+                </div>
+                <div id="GeneralSmallMsg" class="changeTextSmall">
+                </div>
+                <!--<img alt="The Friedberg Jewish Manuscript Society logo" src="imagesFJMS/logo_portal.png" />-->
+            </div>
+        </div>
+        <div class="portalButtons">
+            <!--style="clear: both;"-->
+            <div class="FGPButtonsDisabledUp" id="fgp" name="btns">
+            </div>
+            <div class="FGPButtonsDisabledUp" id="fbp" name="btns">
+            </div>
+            <div class="FGPButtonsDisabledUp" id="frp" name="btns">
+            </div>
+            <div class="FGPButtonsDisabledDown" id="fnp" name="btns">
+            </div>
+            <div class="FGPButtonsDisabledDown" id="fjp" name="btns">
+            </div>
+            <div class="FGPButtonsDisabledDown FGPBtnLogoff FGPBtnsmSiteTitle" id="fkyp" name="btns">
+            </div>
+            <div id="portalGuestMsgBnt" class="portalGuestMsg">
+                <div class="divGuests">
+                    <div id="SpnGuestMsg" class="LoginMsgTitle">
+                    </div>
+                    <div class="FGPGuestbtn">
+                        <input id="GuestLogin" class="FGPLinkGuest" name="hebTexts" type="button" value="" />
+                    </div>
+                    <!--<div id="siteLogOffBtn" class="siteLogOffBtn" onclick="closeGuestDialog()" ></div>-->
+                </div>
+                <div class="divDevelopment">
+                    <div id="SpnDevMsg" class="LoginMsgTitle">
+                    </div>
+                    <!--<div id="backToLoginBtnDev" class="siteLogOffBtn" onclick="closeGuestDialog()" ></div>-->
+                </div>
+                <div class="divBeta">
+                    <div id="SpnBetaMsg" class="LoginMsgTitle">
+                    </div>
+                </div>
+                <div class="divLogin">
+                    <div id="SpnLoginMsg" class="LoginMsgTitle">
+                    </div>
+                </div>
+                <div class="smallImg">
+                </div>
+                <div id="shortDesc" class="shortDesc">
+                </div>
+                <div id="backToLoginBtn" class="siteLogOffBtn" onclick="closeGuestDialog()">
+                </div>
+            </div>
+        </div>
+        <div class="fjmsinfo">
+            <div class="Aligncenter">
+                <div class="Please_note">
+                    <span id="spnDeclaration"></span>
+                </div>
+                <div class="Fjmsinfo_text">
+                    <p id="titlepFjmsinfo">
+                    </p>
+                    <p id="pFjmsinfo">
+                    </p>
+                </div>
+                <div class="WrapfjmsDetails">
+                    <div class="fjmsDetails">
+                        <p>
+                            0
+                        </p>
+                        <span id="pSites"></span>
+                    </div>
+                    <div class="fjmsDetails">
+                        <p>
+                            0
+                        </p>
+                        <span id="pTransc"></span>
+                    </div>
+                    <div class="fjmsDetails">
+                        <p>
+                            0
+                        </p>
+                        <span id="pImages"></span>
+                    </div>
+                    <div class="fjmsDetails">
+                        <p>
+                            0
+                        </p>
+                        <span id="pJoins"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="fjmscontent" class="content content_out">
+            <!--<img src="ImagesFJMS/newportal.png" style="padding: 0px 0px 50px 0px; margin: -40px 0px 0px 0px;"/>-->
+            <div id='fjmsMsgWrpr' class="wrapperMes" style="display: none">
+                <p id='fjmsMsgText'>
+                </p>
+                <!--class=hebNotiMessg-->
+            </div>
+            <div id="noSsoMsgDiv" class="wrapperMes" style="display: none">
+                <p id='noSsoMsgText'>
+                </p>
+                <!--class=hebNotiMessg-->
+            </div>
+            <div class="Aboutus">
+                <!--<div id="Aboutus"  class="contentAboutUs"></div>-->
+                <div class="aboutsTopDiv">
+                    <div class="WrapTopCircleImg">
+                        <img class="topCircleImg" src="ImagesFJMS/FGP.png" />
+                        <div id="aboutFGPtext" class="aboutsText">
+                        </div>
+                        <!-- <div class="Apps">
+                             <a class="btnAndroid" href="https://play.google.com/store/apps/details?id=org.genizah.fgp.mobile&amp;hl=en"
+                                 target="_blank"></a><a class="btnIphone" href="https://itunes.apple.com/us/app/cairo-genizah/id846601233?mt=8"
+                                     target="_blank"></a>
+                         </div>-->
+                    </div>
+                    <div class="WrapTopCircleImg">
+                        <img class="topCircleImg" src="ImagesFJMS/FBP.png" />
+                        <div id="aboutFBPtext" class="aboutsText">
+                        </div>
+                        <!-- <div class="Apps">
+                             <a class="btnAndroid" href="https://play.google.com/store/apps/details?id=org.genizah.fbp.mobile"
+                                 target="_blank"></a><a class="btnIphone" href="https://itunes.apple.com/app/hachi-garsinan/id1069709354?mt=8"
+                                     target="_blank"></a>
+                         </div>-->
+                    </div>
+                </div>
+                <div class="aboutsBottomDiv">
+                    <div class="WrapBottomCircleImg">
+                        <img class="bottomCircleImg" src="ImagesFJMS/FJP.png" />
+                        <div id="aboutFJPtext" class="aboutsText">
+                        </div>
+                    </div>
+                    <div class="WrapBottomCircleImg">
+                        <img class="bottomCircleImg" src="ImagesFJMS/FNP.png" />
+                        <div id="aboutFNPtext" class="aboutsText">
+                        </div>
+                    </div>
+                    <div class="WrapBottomCircleImg clearcircle">
+                        <img class="bottomCircleImg" src="ImagesFJMS/FRP.png" />
+                        <div id="aboutFRPtext" class="aboutsText">
+                        </div>
+                    </div>
+                    <div class="WrapBottomCircleImg">
+                        <img class="bottomCircleImg" src="ImagesFJMS/FKYP.png" />
+                        <div id="aboutFKYPtext" class="aboutsText">
+                        </div>
+                    </div>
+                </div>
+                <div class="clear">
+                </div>
+                <div id="StatDialog">
+                    <h3 class="statTableheader">
+                        Browsing Statistics / ���������� �����
+                    </h3>
+                    <table id="StatTable" class="StatTable" width="100%"></table>
+                </div>
+            </div>
+            <!--end content div-->
+            <div id="footer" class="footer_content">
+            </div>
+        </div>
+        <!--end wrapper-->
+        <div id="terms" class="termWrapper" style="display: none" title="Terms of Use - ���� ������ ">
+            <h2 class="termHeader" name="engTexts">
+                Terms Of Use
+            </h2>
+            <h2 class="termHeaderHeb" name="hebTexts">
+                ���� ������ ����
+            </h2>
+            <div id="Terms" class="termTextEng" name="engTexts">
+                <p>
+                    By registering to the Friedberg portal I hereby declare that I agree to the following
+                    terms of use and commit to use the portal sites strictly in accordance with the
+                    terms and conditions below (the term "portal" includes all the sites in the portal):
+                </p>
+                A- General
+                <ul>
+                    <li>
+                        I understand that the username and password allocated to me to access the portal
+                        are strictly for use in this capacity only, and I agree not to share them with anyone
+                        else.
+                    </li>
+                    <li>
+                        I confirm that I shall not use any image, data or information displayed in the site
+                        for commercial use of any kind, and that these will be used only for personal study
+                        and research.
+                    </li>
+                    <li>
+                        Any publication that mentions an image, transcription or other information that
+                        appears in one of the portal sites will have to give credit to the source of the
+                        image or data as well as to the site and to The Friedberg Jewish Manuscript Society
+                        (FJMS).
+                    </li>
+                    <li>
+                        I understand that despite the efforts made by the developers to ensure that the
+                        images, catalog data, bibliographical references and any other data displayed in
+                        the site are correct, precise and comprehensive, some errors or omissions may have
+                        occurred, and I will not hold the developers responsible for these errors or omissions
+                        or for any ensuing damage of any kind.
+                    </li>
+                    <li>
+                        I understand that I may be denied access to the portal if I am found in breach of
+                        any of the clauses mentioned in these �Terms of Use�.
+                    </li>
+                </ul>
+                B - Images
+                <ul>
+                    <li>
+                        I have been informed that all digital images of manuscripts and fragments displayed
+                        in the portal are the property of the respective owners as mentioned on the site,
+                        are copyrighted by them, and are displayed in this portal courtesy of their owners.
+                    </li>
+                    <li>
+                        I agree and confirm that I will not download, store, copy, print, reproduce or publish
+                        any of these images, or forward them to any person or organization, in any format-
+                        electronic, magnetic, printed or otherwise, without written consent from the owners
+                        and the FJMS.
+                    </li>
+                </ul>
+                <br />
+                C - Scanned Catalogs
+                <br />
+                I hereby agree and confirm that the scans of entries from catalogs and the accompanying
+                data displayed in this portal are available for research purposes only, and that
+                their source will be recognized in any such use, in the form of a full bibliographical
+                reference to the published volume in which they appear, to be accompanied by the
+                text credit as mentioned on the site, and by an appropriate credit to the site and
+                the FJMS. No commercial or other use of this material is allowed, and the scans
+                may not be copied, printed, published or otherwise reproduced without written consent
+                from the copyright holders and the FJMS.
+                <br />
+                D � Related Data
+                <br />
+                I hereby agree and confirm that the copyright to any data accompanying the manuscripts
+                appearing in this portal, including identifications, transcriptions, cataloging
+                data, translations, joins and the like, belong to their respective authors. I declare
+                that I shall respect these rights and will make due acknowledgement, whenever quoting
+                them, to the authors, the portal and the FJMS.
+                <br />
+                E � Cooperation with FJMS
+                <br />
+                I hereby agree:
+                <ul>
+                    <li>
+                        to provide FJMS at my earliest convenience with a detailed list of all my publications
+                        that contain or mention original findings related to data that appears in the portal,
+                        such as identifications, cataloging data, transcriptions, translations or joins
+                        (of fragments).
+                    </li>
+                    <li>
+                        to help FJMS to obtain printed versions � and, when available, computerized versions
+                        - of these publications.
+                    </li>
+                    <li>
+                        to grant FJMS a non-exclusive royalties-free irrevocable license to integrate these
+                        published findings into the FJMS databases, to process them in any way considered
+                        beneficial to the FJMS mission and goals, and to display them in the portal. In
+                        case other permissions (by co-authors, publishers, funding agencies and the like)
+                        are also required for such a display, and FJMS was informed by me about them, it
+                        will be FJMS's responsibility to obtain them, and I will cooperate with it in this
+                        task.
+                    </li>
+                    <li>
+                        to accept FJMS policy to display any findings related to the contents of the portal
+                        that it is licensed to display, stating the name of its source, origin or author.
+                    </li>
+                </ul>
+            </div>
+            <div id="" class="termTextHeb" name="hebTexts">
+                �����
+                <p>
+                    ������ ������ ������� ��� �����(�) �� ��� �����(�) ��� ������ ������ ����� �������(�)
+                    ������ ������ ������� �� ��� ����� ������ ����� (����� "�����" ����� ���� �� ��
+                    �� ������ �������).
+                </p>
+                � - ����
+                <ul>
+                    <li>
+                        ���� �� ��� ������ ������� ������ �� ��� ���� ���� ������ �� ������� ����� ����,
+                        ���� ������(�) ��� ���� ��� ����� ��.
+                    </li>
+                    <li>
+                        �� ����� �� ��� �� ����� ����� �������, �������, �� ��� ���� ��� ����� ������, �������
+                        ���� ����� ����� ����� ����.
+                    </li>
+                    <li>
+                        ��� ����� ���� ��� ������� �����, �����, �� ���� ��� ������ ���� ������ �������,
+                        ��� ����� ����� ���� ������ �� ������, ������ �� �����, ������ ���� �����, ��� �����
+                        ���� ���� ������� ������� ����-��� ������. (���� FJMS)
+                    </li>
+                    <li>
+                        ���� �� ������ ������� �� ����� ���� ������ �� ������ ������ �� ������� ��������
+                        ������� ����, ��� �� ����� ������� �����, ����� ����� ������ �/�� ������ ����� �����
+                        �����. ��� �����(�) �� �� ���� �� ����� ���� ������ ������� �� ������� �����, ��
+                        ������ ������� ������ �� ���������.
+                    </li>
+                    <li>
+                        ���� �� �� ������ ��� ������ ����� ������ ���� ��� ���, ���� �� ����� ��� ��������
+                        �� ���� "���� �����" ��.
+                    </li>
+                </ul>
+                � - ������
+                <ul>
+                    <li>
+                        ���� �� ��� ������� ����������� ������� ������ �� ����� �� ������ �������� ������
+                        ������, �� ������ ������� ������ ��� ����� �����, ��� ������� ������ ������ ��������.
+                    </li>
+                    <li>
+                        ���� �� ����� ����(�) ������, ������, ����� �/�� ������ ���� �� ������ ��� ���,
+                        ���� �� ���� ����� ����� �� ����� ���� �������,��� ����� ���� � ��������, �����,
+                        ����� �� ��� ��� �� ����� ����� ���� ������ ��� ����� FJMS ���� �����.
+                    </li>
+                </ul>
+                <br />
+                � � ������ �������� ����� ������
+                <br />
+                <ul></ul>
+                ��� ����(�) ��� �� ������� �� ������ �������� ��� �� ����� ������� ���� ���� �������
+                ���� ����, ����� ����� ����� ���� ����� ������ ����� ����� �� ����� ������������
+                ���� ������� ����� ������, ������ ����"� ��� ����� ����� ����, ��� ����� ����� ����
+                �� FJMS. ������ ��� ����� ����� ����� ��� ��� ���� ������� ��"�, ���� ������, ������,
+                ����� �� ����� ����� ���� ��� ���� ���� ���� ���� �� ���� ���� ������� ������� ����
+                �����.
+                <br />
+                � � ������ ������
+                <br />
+                ��� ����(�) ��� �� ������ ������� �� �� ����� ������ ����� ��� �������, ���� �������,
+                ������, ���� ������, �������, ������� ���', ������ ��������. ��� �����(�) �� ����
+                �� ������� ���� ��� ����� ����� ����� �� ������ �����, �� ������ ��� FJMS, ��� �����
+                ����.
+                <br />
+                � � �����-�����
+                <br />
+                ��� �����(�):
+                <ul>
+                    <li>
+                        ���� � FJMS ��� ��� ����� ������ �� �� ������� ������� �� �������� ������� �������
+                        ������� ����� ������ ������, ���� �������, ������ ��������, ������, ������� �� �������
+                        (�� �����).
+                    </li>
+                    <li>
+                        ����� �FJMS ����� ������ �������, ����� ���� �����, �� ������ ��������, �� ��������
+                        ��"�.
+                    </li>
+                    <li>
+                        ������ � FJMS ������ ���� ����, ��� �������, ������ ��������, ������ ������ �����
+                        ������ ������� �� FJMS, ����� ��� ��� ������ ������� ������ ������� �� FJMS�������
+                        ������. ����� ����� ��"� ����� ������ ������ ����� (������ ������, ��"���, ������
+                        ������ ����"�) ���� ����� �� �� �-FJMS ���� FJMS ������ ����� �� ������� ����, ����
+                        ������(�) ����� �� ����.
+                    </li>
+                    <li>
+                        ��������� �� FJMS ����� ������ �� ���� ����� ����� ������ ���� ������ �����, ����
+                        ���� ������ ����, ������ ���� �� ����� �� ����� �� ���� ����.
+                    </li>
+                </ul>
+            </div>
+            <div>
+                <span name="engTexts">
+                    I have read the foregoing clauses and agree to be bound by them
+                </span><span style="direction: right; display: inline-block; float: left;" name="hebTexts">
+                    ����� �� ������ ��"�, �� ������� ��� ���� ������(�) ����� �����.
+                </span>
+            </div>
+        </div>
+        <div id="fillProfile" class="termWrapper" style="display: none" title="User Profile - ������ ����� ">
+            <p name="engTexts">
+                Dear user, Your profile is missing some important information. Click OK to open
+                the Edit Profile page in order to fill in the missing information (Starred fields
+                are required, but we would appreciate filling in the other fields too).
+            </p>
+            <p name="hebTexts" class="hebTexts">
+                ����� ���, ������� ������ ��� ����� ����� ������; ��� �� "�����" ��� ����� ��� �����
+                ������ ������ ����� ���� (���� �� ���� * �� �������, ���� ����� ��� �� ����� ��
+                �� ��� �����).
+            </p>
+        </div>
+        <div id="registerDialog">
+        </div>
+        <div id="externalContactUs">
+        </div>
+        <div id="Divhidden">
+            <input type="hidden" id="hidUIT" />
+        </div>
+        <div id="test" style="display: none">
+            <a href="SSO/TestUserTables.htm" target="_blank">����� ������ �������</a>
+        </div>
+    </div>
+    <div id="dialog"></div>
+</body>
+</html>

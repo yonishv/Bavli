@@ -18,14 +18,13 @@
         </form>
         <form id="genizahLoginForm" class="controls genizah-auth-form" autocomplete="off">
           <span class="auth-label">התחברות להכי גרסינן</span>
-          <label for="genizahUsername">משתמש</label>
-          <input id="genizahUsername" name="username" type="text" />
-          <label for="genizahPassword">סיסמה</label>
-          <input id="genizahPassword" name="password" type="password" />
-          <button id="genizahLoginBtn" type="submit">התחבר</button>
-          <label for="genizahCookie">Cookie</label>
-          <input id="genizahCookie" name="cookie" type="text" placeholder="ASP.NET_SessionId=...; ..." />
-          <button id="genizahCookieBtn" type="button">הדבק Cookie</button>
+          <div class="genizah-credentials">
+            <label for="genizahUsername">משתמש</label>
+            <input id="genizahUsername" name="username" type="text" />
+            <label for="genizahPassword">סיסמה</label>
+            <input id="genizahPassword" name="password" type="password" />
+            <button id="genizahLoginBtn" type="submit">התחבר</button>
+          </div>
           <span id="genizahAuthStatus" class="auth-status">לא מחובר</span>
         </form>
         <p id="status" class="status">מוכן.</p>

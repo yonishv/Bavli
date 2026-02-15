@@ -1,0 +1,452 @@
+@font-face
+{
+    font-family: 'Heebo-Regular';
+    src: url('../fonts/Heebo-Regular.ttf') format('truetype');
+}
+
+input
+{
+    outline: none;
+}
+
+.DivFJMSToolBar
+{
+    background-color: #F9F5EE;
+    padding: 10px;
+    border-bottom: 2px solid #E6B764;
+}
+
+.prtalTollBarLink
+{
+    border: none;
+    background-color: transparent;
+    color: #BD0630;
+    font-size: 12px;
+    font-weight: bold;
+    font-family: Heebo-Regular;
+    border-right: 2px solid #BD0630;
+    margin: 0px 5px;
+    cursor: pointer;
+}
+
+.prtalTollBarLink:hover
+{
+    text-shadow: 0px 0px 0px #999;
+}
+
+.changelang
+{
+    float: left;
+    background: url(../imagesFJMS/EN.png)no-repeat;
+    height: 15px;
+    width: 27px;
+    height: 20px;
+    float: left;
+    padding: 0px; /*margin: 10px 5px;*/
+    border: none;
+    cursor: pointer;
+}
+.changelang:hover
+{
+    box-shadow: 0px 0px 1px #999;
+}
+
+.changelangEng
+{
+    /*float: right;     margin: 10px 7.5% 0px 0%;*/
+    background: url(../imagesFJMS/IL.jpg)no-repeat top left;
+}
+
+.wrapperCon
+{
+    background-color: #FFFFFF;
+    padding: 10px;
+    border-bottom: 1px solid #E6B764;
+}
+.BrowsingStatisticsBtn
+{
+    cursor: pointer;
+    color: #a50718;
+    font-weight: bold;
+    height: 35px;
+    width: 326px; /* padding: 12px 5px 5px 10px; */
+    font-size: 13px;
+    background: #f5dec9;
+    background: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/Pgo8c3ZnIHhtbG5zPSJod…EiIGhlaWdodD0iMSIgZmlsbD0idXJsKCNncmFkLXVjZ2ctZ2VuZXJhdGVkKSIgLz4KPC9zdmc+);
+    background: -moz-linear-gradient(top, #f5dec9 0%, #e29b5a 100%);
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#f5dec9), color-stop(100%,#e29b5a));
+    background: -webkit-linear-gradient(top, #f5dec9 0%,#e29b5a 100%);
+    background: -o-linear-gradient(top, #f5dec9 0%,#e29b5a 100%);
+    background: -ms-linear-gradient(top, #f5dec9 0%,#e29b5a 100%);
+    background: linear-gradient(to bottom, #f5dec9 0%,#e29b5a 100%);
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#f5dec9', endColorstr='#e29b5a',GradientType=0 );
+    border: 1px solid #BD9548;
+    text-align: center;
+    margin: 5px 0px;
+}
+.BrowsingStatisticsBtnImg
+{
+    position: absolute;
+    margin-top: 13px;
+    margin-left: 30px;
+}
+.StatTable
+{
+    border: 1px solid #AAAAAA;
+    font-size: 12px;
+    text-align: center;
+    border-collapse: collapse;
+}
+.StatTable td
+{
+    border: 1px solid #E0E0E0;
+    padding: 5px;
+    background-color: white;
+}
+.StatTable th
+{
+    background-color: #EEEEEE;
+    padding: 5px;
+    color: #bd0630;
+    font-weight: bold;
+    border: 1px solid #E0E0E0;
+}
+.statTableheader
+{
+    font-size: 14px;
+    color: #B80A1D;
+}
+
+
+
+
+#FJMSdialog
+{
+    padding: 0px !important;
+}
+
+.FJMSdialogCSS
+{
+    border: 10px solid #999999 !important;
+    font-family: Heebo-Regular !important;
+}
+.rtl
+{
+    text-align: right;
+}
+
+.titleHeb
+{
+    float: right;
+}
+/*.ui-dialog .ui-dialog-titlebar
+{
+    position:relative!important;
+    top:auto;
+    right:auto;
+}*/
+
+
+
+.FJMSdialogCSS .ui-dialog-titlebar
+{
+    padding: 30px 0px 30px 40px !important;
+    background: #f2f2f2 !important;
+    font-size: 18px !important;
+    color: #a50718 !important;
+    font-size: 24px !important;
+    z-index: 9000 !important;
+    font-family: Heebo-Regular !important;
+    font-weight: bold !important;
+    border: none !important;
+    float: none !important;
+    display: block !important;
+}
+
+.FJMSdialogCSS .ui-dialog-title
+{
+    font-family: Heebo-Regular !important;
+    text-align: left;
+    width: auto !important;
+    margin: .1em 16px 0 !important;
+}
+
+.FJMSdialog_title_span
+{
+    float: right !important;
+    font-family: Heebo-Regular !important;
+    
+}
+
+.FJMSdialog_title_a
+{
+    /*float: left !important;*/
+    left: .3em !important;
+    right: auto !important;
+}
+
+.FJMSdialogCSS2
+{
+    border: 1px solid #999999;
+    font-family: Heebo-Regular !important;
+}
+
+.FJMSdialogCSS2 .ui-dialog-titlebar
+{
+    padding: 0px;
+    font-size: 24px;
+    z-index: 9000;
+    font-family: Heebo-Regular;
+    border: none;
+    width: 100%;
+}
+
+.FJMSdialogCSS2 .ui-dialog-titlebar-close
+{
+    left: 20px;
+}
+
+
+.guestOrInstMsg
+{
+    display: block;
+    direction: rtl;
+    background-color: transparent;
+    width: 100%;
+}
+
+.guestOrInstMsg .txtContainer
+{
+    text-align: center;
+}
+
+/*.guestOrInstMsg .signedGuestMsg
+{
+    
+}*/
+
+/*.guestOrInstMsg .signedInstitutionMsg
+{
+    
+}*/
+
+.guestOrInstMsg .txtContainer .msgTitle
+{
+    color: black;
+    font-size: 17px;
+    text-align: center;
+    text-transform: none;
+    position: relative;
+    margin-top: 25px;
+    padding: 0;
+    display: block;
+    word-wrap: break-word;
+    line-height: -2px;
+}
+
+.guestOrInstMsg .txtContainer .msgContent
+{
+    font-size: 14px;
+    text-align: center;
+    font-weight: 500;
+    position: relative;
+    float: none;
+    margin: 0;
+    padding: 0;
+    line-height: normal;
+    color: black;
+    word-wrap: break-word;
+    margin-top: 3px;
+}
+
+.guestOrInstMsg .wrapperBtns
+{
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    -webkit-box-pack: center;
+    -ms-flex-pack: center;
+    justify-content: center;
+    text-align: center;
+    margin-bottom: 32px;
+    margin-top: 20px;
+    width: 88%;
+    margin-right: auto;
+    margin-left: auto;
+    height: 45px;
+}
+
+.guestOrInstMsg .wrapperBtns .mBtn
+{
+    border: 0;
+    border-radius: 3px;
+    -webkit-box-shadow: none;
+    box-shadow: none;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 15px 5px 0;
+    padding: 8px 32px;
+}
+
+.guestOrInstMsg .wrapperBtns .openLoginWinBtn
+{
+    background-color: #393b7d;
+    float: right;
+    font-family: 'Heebo-Regular';
+}
+
+.guestOrInstMsg .wrapperBtns .openLoginWinBtn:hover
+{
+    background: #1b1464;
+    box-shadow: 1px 1px 5px #999;
+}
+
+.guestOrInstMsg .wrapperBtns .closeWinBtn
+{
+    background-color: transparent;
+    color: rgb(27, 20, 100);
+    border: 1px solid rgb(27, 20, 100);
+    float: left;
+    font-family: 'Heebo-Regular';
+}
+
+.guestOrInstMsg .wrapperBtns .closeWinBtn:hover
+{
+    box-shadow: 1px 1px 5px #999;
+}
+
+.loginOrReg
+{
+    float: right;
+    width: 100%;
+}
+
+.loginWrapper
+{
+    background: #1B1464;
+    padding: 15px;
+}
+
+.forgotPassCon .ForgotPassBtnHeb
+{
+    float: right;
+}
+
+.loginWrapper .wrapperLoginBtn
+{
+    width: 100%;
+    padding: 0px;
+}
+
+.loginWrapper .wrapperLoginBtn .LoginBtnHeb
+{
+    margin: 5px 18px 0px 18px;
+    width: 100px;
+}
+
+.registerWrapper
+{
+    padding: 15px;
+}
+
+.registerWrapper .regTitleHeb
+{
+    color: #880B1A;
+    margin: 0px 18px 0px 18px;
+    direction: rtl;
+}
+
+.registerWrapper .LoginBtnHeb
+{
+    clear: both;
+    margin: 8px 18px 0px 17px;
+    padding: 2px 27px 2px 28px;
+    width: 100px;
+}
+
+.initRegister iframe
+{
+    float: right;
+    margin-right: 35px;
+    width: 400px;
+    height: 470px;
+    border: none;
+}
+
+.initRegister iframe .WrapstepTitle
+{
+    display: none;
+}
+
+/* The Modal (background) */
+.flexibleModal
+{
+    display: none;
+    position: fixed; /* Stay in place */
+    z-index: 9999;
+    padding-top: 100px;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0);
+    background-color: rgba(0,0,0,0.4);
+
+}
+
+.flexibleModalContent
+{
+    background-color: #fefefe;
+    margin: auto;
+    border: 1px solid #888;
+    width: 570px;
+    height: 190px;
+    overflow: hidden;
+    cursor: move;
+}
+
+.flexibleCloseBtn
+{
+    float: right;
+    font-size: 20px;
+    padding: 3px 4px 0px 4px;
+}
+
+.closeHebBtn
+{
+    float: left;
+}
+
+.flexibleCloseBtn:hover, .flexibleCloseBtn:focus
+{
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.mobileModalBtn {
+    margin: 20px auto !important;
+    display: block;
+    float: none !important;
+}
+
+.modalMobileSize
+{
+    width: auto !important;
+    min-height: 270px !important;
+}
+
+/* end Modal  */
+.FJMSdialogCSS.ui-dialog .ui-dialog-title
+{
+    float:right;
+}
+
+.FJMSdialogCSS.ui-dialog .ui-dialog-titlebar-close
+{
+    position: sticky;
+    float: left;
+}

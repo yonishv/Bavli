@@ -1,0 +1,421 @@
+@font-face
+{
+    font-family: 'Heebo-Regular';
+    src: url('../fonts/Heebo-Regular.ttf') format('truetype');
+}
+
+@font-face
+{
+    font-family: 'HeeboBold';
+    src: url('../fonts/Heebo-Bold.ttf'); /*format('truetype');*/
+}
+
+body
+{
+    margin: 0px;
+    padding: 0px;
+    font-family: heebo;
+    font-size: 14px;
+    color: #31313F;
+    line-height: 160%;
+    text-align: justify;
+}
+
+input
+{
+    outline: none;
+}
+
+.SSOlogin
+{
+    height: 240px;
+    width: 300px;
+    margin: 20px 0px 0px 2%;
+    float: left;
+}
+.innerWrapper
+{
+    text-align: left;
+}
+.LoginBtnHeb
+{
+    float: left;
+}
+.WrapperUserPas
+{
+    direction: ltr;
+}
+.WrapperUserPas input
+{
+    padding-left: 5px;
+    margin-left: 12px;
+    margin-right: 0px;
+}
+.wrapperLoginBtn
+{
+    padding: 0px 10px 0px 20px;
+}
+.wrapLogin_Institution
+{
+    direction: ltr;
+}
+
+.wrrapeImages
+{
+    float: right; /*margin: -40px 5% 0px 0;*/
+}
+
+.changeText
+{
+    float: left;
+    margin: 5% 0 0 7.5%;
+    text-align: left;
+    color: #ffffff;
+    direction: ltr;
+    line-height: 130%;
+}
+
+.logo_portal
+{
+    float: left;
+    margin: -20px 10px 10px 7.5%;
+}
+.statAndPr
+{
+    margin-left: 0;
+    margin-right: 7.5%;
+    float: right;
+}
+.changelang
+{
+    float: right;
+    margin: 10px 7.5% 0px 0%;
+    background: url(../imagesFJMS/IL.jpg)no-repeat top left;
+}
+    @media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+   /* IE10+ CSS */
+   .iviewerWrapperDiv{
+        margin-right: 0px;
+      }
+}
+.portallink
+{
+    float: right;
+}
+.wraaperAdmin
+{
+    float: right;
+    right: 21%;
+    left: inherit;
+}
+.DivFJMSToolBar
+{
+    direction: rtl;
+}
+.backyad
+{
+    background-image: url(../ImagesFJMS/backgroundEN.jpg);
+}
+.FGPButtons
+{
+    float: left;
+}
+.FGPButtons a
+{
+    direction: ltr;
+}
+
+.FGPButtons a:after
+{
+    padding-right: 0px;
+    content: "›";
+    padding-left: 5px;
+}
+
+#fbp:before
+{
+    float: left;
+    margin-right: 0px;
+    margin-left: -2px;
+}
+
+#fnp:before
+{
+    float: right;
+    margin-right: 0px;
+    margin-left: -2px;
+}
+
+#frp:before
+{
+    float: left;
+    margin-right: 0px;
+    margin-left: -2px;
+}
+
+#fkyp:before
+{
+    float: left;
+    margin-right: 0px;
+    margin-left: -2px;
+}
+
+.FGPButtonsDisabledUp
+{
+    float: left;
+}
+
+.FGPButtonsDisabledUp a
+{
+    direction: ltr;
+}
+
+.FGPButtonsDisabledUp a:after
+{
+    padding-right: 0px;
+    content: "›";
+    padding-left: 5px;
+}
+
+.WrapfjmsDetails
+{
+    float: right;
+}
+
+.fjmsinfo
+{
+    height: 250px;
+}
+
+.fjmsinfo p
+{
+    float: left;
+    margin: auto 0px auto 0;
+    text-align: left;
+    direction: ltr;
+}
+
+.fjmsDetails
+{
+    height: 100px;
+}
+
+.fjmsDetails p
+{
+    float: none;
+    text-align: center;
+}
+
+.arrowbtnL
+{
+    background: url(../ImagesFJMS/arrowR.png) no-repeat center center;
+    float: right;
+}
+
+.arrowbtnR
+{
+    background: url(../ImagesFJMS/arrowL.png) no-repeat center center;
+    float: left;
+}
+
+.InstitutionLogWrapper
+{
+    padding: 0px 0px 0px 10px;
+    width:100%;
+}
+
+.contentAboutUs
+{
+    text-align: left;
+    direction: ltr;
+}
+
+.changeTextSmall
+{
+}
+.FGPButtonsDisabledDown
+{
+    float: left;
+    direction: ltr;
+}
+
+.FGPButtonsDisabledDown a:after
+{
+    padding-right: 0px;
+    content: "›";
+    padding-left: 5px;
+}
+
+.Please_note
+{
+    direction: ltr;
+    background: url(../imagesFJMS/declarationEN.png) no-repeat;
+    background-position: center left;
+    padding: 10px 10px 0px 10px;
+    width: 930px;
+}
+
+.Fjmsinfo_text
+{
+    float: left;
+    width: 650px;
+    margin-right: 0px;
+}
+
+.aboutsTopDiv
+{
+    direction: ltr;
+}
+
+.aboutsBottomDiv
+{
+    direction: ltr;
+}
+
+.WrapTopCircleImg
+{
+    float: left;
+}
+.WrapBottomCircleImg
+{
+    float: left;
+}
+.footer_content
+{
+    height: 80px;
+    direction: ltr;
+}
+.soonImg
+{
+    background: url(../imagesFJMS/commingSE.png) no-repeat;
+    height: 20px;
+    width: 98px;
+    margin-top: -55px;
+    float: right;
+}
+.newImg
+{
+    background: url(../imagesFJMS/new_en.png) no-repeat;
+    height: 20px;
+    width: 57px;
+    margin-top: -55px;
+    float: right;
+}
+.newBetaImg
+{
+    margin-top: -31px !important;
+}
+.betaImg
+{
+    background: url(../imagesFJMS/beta_en.png) no-repeat;
+    height: 20px;
+    width: 57px;
+    margin-top: -55px;
+    float: right;
+}
+
+.LoginMsgTitle
+{
+    text-align: left;
+}
+.portalGuestMsg
+{
+    direction: ltr;
+}
+.shortDesc
+{
+    text-align: left;
+    padding: 5px 0px 5px 10px;
+}
+.smallImg
+{
+    float: left;
+}
+.Aboutus
+{
+    direction: ltr;
+}
+.NotiMessg
+{
+    direction: ltr;
+}
+
+.approval
+{
+    text-align: left;
+    float: left;
+}
+.step
+{
+    float: left;
+}
+.linemiddle
+{
+    float: left;
+}
+.stepTitle
+{
+    direction: ltr;
+}
+.Continued
+{
+    float: right;
+}
+.popUpTitle span
+{
+    float: left !important;
+}
+.wrapperEPSubBtn3Heb
+{
+    float: left;
+}
+.siteLogOffBtn
+{
+    float: right;
+}
+.float
+{
+    float: left;
+}
+.EditPLeft
+{
+    float: left;
+}
+.EditPRight
+{
+    float: right;
+}
+/*.re_captcha
+{
+    float:left;
+}*/
+
+.back
+{
+    float: left;
+}
+
+.backToLogin
+{
+    float: right;
+    margin-right:20px;
+}
+.FJMSdialogCSS
+{
+    text-align:left;
+}
+
+.swal2-content,.swal2-title
+{
+    direction:ltr;
+}
+
+.regTitleHeb, .forgotPassCon .ForgotPassBtnHeb
+{
+    float: left;
+}
+
+.registerWrapper .regTitleHeb
+{
+    direction: ltr;
+}

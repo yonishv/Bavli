@@ -1,0 +1,230 @@
+input
+{
+    outline: none;
+}
+
+.DivFJMSToolBar
+{
+    background-color: Red; /* #FFFFFF;*/
+    padding: 10px;
+    border-bottom: 1px solid #ffffff;
+}
+.FJMSWelcomeText
+{
+    color: #401D30;
+    font-weight: bold;
+    font-size: 13px;
+    margin-left: 10px;
+}
+.portallink
+{
+    margin: 5px 10px 5px 10px;
+    float: left;
+    border: none;
+    background-color: transparent;
+    color: #401D30;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    direction: rtl;
+    font-family: heebo;
+    text-decoration: none;
+}
+.prtalTollBarLink:hover
+{
+    text-shadow: 0px 0px 0px #999;
+}
+.changelang
+{
+    margin: 10px 0px 0px 7.5%;
+}
+
+.changelang:hover
+{
+    box-shadow: 0px 0px 1px #999;
+}
+
+.wrapperCon
+{
+    background-color: transparent;
+    padding: 10px;
+    width: 85%;
+    margin: 0px auto;
+    border: none;
+}
+.statAndPr
+{
+    float: left;
+    clear: both;
+    margin-left: 7.5%;
+    border-top: 1px solid #401D30;
+    width: 20%;
+}
+
+.prtalTollBarLink
+{
+    color: #401D30;
+    border: none;
+}
+.backyad
+{
+    box-shadow: 2px 2px 5px #585656;
+    margin-top: -43px;
+    height: 504px;
+    background-image: url(../ImagesFJMS/background.jpg);
+    background-position: center;
+}
+.fjmsinfo
+{
+    text-align: center;
+    background: #E5E5E5;
+    padding: 20px 10px;
+    height: 230px;
+    font-family: Heebo;
+    margin-top: 1px;
+}
+.fjmsinfo p
+{
+    float: right;
+    clear: both;
+    margin: auto 0px auto 0px;
+    direction: rtl;
+    font-size: 16px;
+    color: #000000;
+    text-align: right;
+}
+
+.WrapfjmsDetails
+{
+    width: 600px;
+    float: left;
+    margin-top: 30px;
+}
+
+.fjmsDetails
+{
+    width: auto;
+    float: right;
+    padding: 0px 8px;
+}
+
+.fjmsDetails p
+{
+    float: none;
+    text-align: center;
+    font-size: 40px;
+    padding: 5px 0px;
+    margin: 20px auto 5px auto;
+    width: 130px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    direction: ltr;
+}
+
+.fjmsDetails span
+{
+    color: #000000;
+    font-weight: bold;
+}
+
+.wraparrowbtn
+{
+    clear: both;
+    margin: 0px auto;
+    z-index: 999;
+}
+
+.arrowbtnR
+{
+    background: url(../ImagesFJMS/arrowR.png) no-repeat center center;
+    float: right;
+    cursor: pointer;
+    border: none;
+    margin: 100px 20px 0px 0px;
+    font-size: 20px;
+    padding: 10px;
+}
+.arrowbtnL
+{
+    background: url(../ImagesFJMS/arrowL.png) no-repeat center center;
+    float: left;
+    cursor: pointer;
+    border: none;
+    margin: 100px 20px 0px 0px;
+    font-size: 20px;
+    padding: 10px;
+}
+
+.wrrapeImages
+{
+    position: relative;
+    text-align: center;
+    float: left;
+    width: 390px;
+    height: 340px;
+    margin: -50px 0 0 5%;
+}
+
+.changeimage
+{
+    position: absolute;
+    top: 0px;
+    width: 100%;
+    left: 0px;
+}
+
+.changeimageNoFade
+{
+    /*position: absolute;     top: 0px;     width: 100%;     left: 0px;*/
+}
+
+.computerFade
+{
+    height: 50%;
+    width: 100%;
+}
+
+.computerNoFade
+{
+    width: 100%;
+}
+
+.changeText
+{
+    width: 480px;
+    float: right;
+    margin: 8% 7.5% 0 0;
+    text-align: right;
+    color: #ffffff;
+    font-size: 36px;
+    font-family: heebo;
+    direction: rtl;
+    line-height: 100%;
+}
+
+.fjmsinfo2
+{
+    background: #ffffff;
+    padding: 20px 10px;
+    height: 200px;
+    font-family: Heebo;
+}
+
+.portalGuestMsg
+{
+    text-align: center;
+    margin: 0px 40px 0px 40px;
+    font-family: Heebo;
+    direction: rtl;
+}
+
+.siteLogOffBtn
+{
+    color: #880B1A;
+    width: auto;
+    text-decoration: underline;
+    cursor: pointer;
+    clear: both;
+    padding: 10px;
+    float: left;
+}

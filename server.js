@@ -6,8 +6,8 @@ const app = express();
 const port = process.env.PORT || 3000;
 const SEFARIA_BASE = "https://www.sefaria.org";
 const GENIZAH_BASE = "https://bavli.genizah.org";
-const GENIZAH_LOGIN_BASES = [GENIZAH_BASE, "https://fjms.genizah.org"];
 let genizahSessionCookie = "";
+let genizahLastEnvLoginAttemptAt = 0;
 const TRACTATE_HEB = {
   Berakhot: "ברכות",
   Shabbat: "שבת",
@@ -176,160 +176,99 @@ async function followRedirectsWithJar(jar, startUrl, maxHops = 6) {
   return last;
 }
 
-function parseInputs(html) {
-  const out = [];
-  const inputRegex = /<input\b([^>]*)>/gi;
-  const attrRegex = /([a-zA-Z_:][\w:.-]*)\s*=\s*["']([^"']*)["']/g;
-  let m;
-
-  while ((m = inputRegex.exec(String(html || ""))) !== null) {
-    const attrs = {};
-    let a;
-    while ((a = attrRegex.exec(m[1])) !== null) {
-      attrs[a[1].toLowerCase()] = a[2];
-    }
-    out.push({
-      name: attrs.name || "",
-      type: (attrs.type || "text").toLowerCase(),
-      value: attrs.value || "",
-    });
-  }
-  return out;
+function escapeRegExp(text) {
+  return String(text || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function parseLoginFormAction(html) {
-  const formRegex = /<form\b([^>]*)>/gi;
-  const attrRegex = /([a-zA-Z_:][\w:.-]*)\s*=\s*["']([^"']*)["']/g;
-  let m;
-  let fallbackAction = null;
-
-  while ((m = formRegex.exec(String(html || ""))) !== null) {
-    const attrs = {};
-    let a;
-    while ((a = attrRegex.exec(m[1])) !== null) {
-      attrs[a[1].toLowerCase()] = a[2];
-    }
-    if (!fallbackAction && attrs.action) fallbackAction = attrs.action;
-    const idName = `${attrs.id || ""} ${attrs.name || ""}`.toLowerCase();
-    if (idName.includes("login")) return attrs.action || null;
+function parseJsonp(body, cbName) {
+  const b = String(body || "");
+  const re = new RegExp(`${escapeRegExp(cbName)}\\s*\\(\\s*([\\s\\S]*?)\\s*\\)\\s*;?`);
+  const m = b.match(re);
+  if (!m) throw new Error("Could not parse JSONP response (callback not found)");
+  const inner = (m[1] || "").trim();
+  if (!inner) throw new Error("Could not parse JSONP response (empty payload)");
+  try {
+    return JSON.parse(inner);
+  } catch (e) {
+    throw new Error(`Could not parse JSONP response (invalid JSON): ${e.message}`);
   }
-  return fallbackAction;
 }
 
-function findFieldCandidates(inputs, kind) {
-  const out = [];
-  const userRegex = /(user|email|login|identifier|name)/i;
-  const passRegex = /(pass|pwd)/i;
-  for (const input of inputs) {
-    const name = String(input.name || "");
-    if (!name) continue;
-    const t = String(input.type || "").toLowerCase();
-    if (kind === "user") {
-      if (t === "text" || t === "email" || userRegex.test(name)) out.push(name);
-    } else if (kind === "password") {
-      if (t === "password" || passRegex.test(name)) out.push(name);
-    }
-  }
-  return [...new Set(out)];
+function isZeroGuid(guid) {
+  return String(guid || "").trim() === "00000000-0000-0000-0000-000000000000";
 }
 
-async function attemptLoginOnBase(baseUrl, jar, username, password) {
-  const loginUrl = `${baseUrl}/Account/Login`;
-  const pageResponse = await followRedirectsWithJar(jar, loginUrl);
-  const html = await pageResponse.text();
-  const inputs = parseInputs(html);
+async function ssoGetLoginUIT(username, password, screenWidth = 1200) {
+  const cb = `__cb${Math.random().toString(16).slice(2)}`;
+  const url = new URL("https://SSO.genizah.org/login/GetLoginUIT");
+  url.searchParams.set("screenWidth", String(screenWidth));
+  url.searchParams.set("username", username);
+  url.searchParams.set("password", password);
+  url.searchParams.set("callback", cb);
 
-  const formAction = parseLoginFormAction(html) || "/Account/Login";
-  const postUrl = new URL(formAction, baseUrl).toString();
-
-  const form = new URLSearchParams();
-  for (const input of inputs) {
-    if (!input.name || input.type !== "hidden") continue;
-    form.set(input.name, input.value || "");
-  }
-
-  const userFields = findFieldCandidates(inputs, "user");
-  const passFields = findFieldCandidates(inputs, "password");
-  for (const field of userFields) form.set(field, username);
-  for (const field of passFields) form.set(field, password);
-  if (!userFields.length) {
-    for (const f of ["UserName", "Username", "Email", "Login", "userName", "username", "email"]) {
-      form.set(f, username);
-    }
-  }
-  if (!passFields.length) {
-    for (const f of ["Password", "password", "Passwd"]) {
-      form.set(f, password);
-    }
-  }
-  if (!form.has("RememberMe")) form.set("RememberMe", "false");
-  if (!form.has("rememberMe")) form.set("rememberMe", "false");
-
-  const loginResponse = await fetchWithJar(jar, postUrl, {
-    method: "POST",
+  const response = await fetch(url.toString(), {
     headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Origin: getOrigin(postUrl),
-      Referer: loginUrl,
+      Accept: "application/javascript, text/javascript, */*; q=0.01",
+      Referer: "https://fjms.genizah.org/",
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     },
-    body: form.toString(),
   });
-  if (loginResponse.status >= 300 && loginResponse.status < 400) {
-    const location = loginResponse.headers.get("location");
-    if (location) {
-      await followRedirectsWithJar(jar, new URL(location, postUrl).toString());
-    }
+  const contentType = response.headers.get("content-type") || "";
+  const body = await response.text();
+  if (!response.ok) {
+    throw new Error(`SSO GetLoginUIT failed: ${response.status} (${contentType}) ${body.slice(0, 140)}`);
   }
-  return {
-    baseUrl,
-    status: loginResponse.status,
-    cookies: [...jar.keys()],
-  };
+
+  let obj;
+  try {
+    obj = parseJsonp(body, cb);
+  } catch (e) {
+    throw new Error(`SSO GetLoginUIT parse failed: ${e.message}. (${contentType}) ${body.slice(0, 140)}`);
+  }
+  const UIT = obj?.UIT || obj?.uit || "";
+  const Status = obj?.Status ?? obj?.status;
+  return { UIT, Status };
 }
 
 async function loginToGenizah(username, password) {
-  const diagnostics = [];
-  let winningJar = null;
-  let winningMeta = null;
+  // The real login flow is handled via the Genizah SSO service:
+  // 1) JSONP: https://SSO.genizah.org/login/GetLoginUIT?username=...&password=...
+  // 2) Redirect: https://bavli.genizah.org/Account/SSOSignIn?lang=heb&UIT=...
+  // This results in `.ASPXAUTH` (and other cookies) on bavli.genizah.org, which are required for API access.
+  const { UIT, Status } = await ssoGetLoginUIT(username, password);
+  if (Number(Status) !== 0 || !UIT || isZeroGuid(UIT)) {
+    throw new Error(`SSO login failed: Status=${String(Status)} UIT=${UIT ? String(UIT).slice(0, 8) + "…" : "(none)"}`);
+  }
 
-  for (const baseUrl of GENIZAH_LOGIN_BASES) {
-    const jar = new Map();
-    try {
-      const meta = await attemptLoginOnBase(baseUrl, jar, username, password);
-      const probeResponse = await fetchWithJar(
-        jar,
-        `${GENIZAH_BASE}/api/SelectionControlAPI/GetDivisions?levelId=1&parentIds%5B0%5D=&inProjectId=&useFtsSession=false`,
-        {
-          headers: {
-            Accept: "application/json, text/javascript, */*; q=0.01",
-            "X-Requested-With": "XMLHttpRequest",
-            Referer: "https://bavli.genizah.org/?lan=heb&isPartial=False&isDoubleLogin=False",
-          },
-        }
-      );
+  const jar = new Map();
+  const signIn = new URL("/Account/SSOSignIn", GENIZAH_BASE);
+  signIn.searchParams.set("lang", "heb");
+  signIn.searchParams.set("UIT", String(UIT));
 
-      if (probeResponse.ok) {
-        winningJar = jar;
-        winningMeta = meta;
-        break;
-      }
+  await followRedirectsWithJar(jar, signIn.toString(), 10);
 
-      const details = await probeResponse.text();
-      diagnostics.push(
-        `${baseUrl}: probe ${probeResponse.status}, cookies=${meta.cookies.join(",")}, body=${String(details || "").slice(0, 120)}`
-      );
-    } catch (error) {
-      diagnostics.push(`${baseUrl}: ${error.message}`);
+  // Verify the session by probing a JSON endpoint.
+  const probe = await fetchWithJar(
+    jar,
+    `${GENIZAH_BASE}/api/SelectionControlAPI/GetDivisions?levelId=1&parentIds%5B0%5D=&inProjectId=&useFtsSession=false`,
+    {
+      headers: {
+        Accept: "application/json, text/javascript, */*; q=0.01",
+        "X-Requested-With": "XMLHttpRequest",
+        Referer: "https://bavli.genizah.org/?lan=heb&isPartial=False&isDoubleLogin=False",
+      },
     }
+  );
+  if (!probe.ok) {
+    const details = await probe.text();
+    throw new Error(`Genizah probe failed after SSO: ${probe.status}: ${String(details || "").slice(0, 160)}`);
   }
 
-  if (!winningJar) {
-    throw new Error(`Login probe failed on all known domains. ${diagnostics.join(" | ")}`);
-  }
-
-  const cookieHeader = cookieHeaderFromJar(winningJar);
-  if (!cookieHeader) {
-    throw new Error(`No session cookie received from successful probe loginBase=${winningMeta?.baseUrl || "unknown"}`);
+  const cookieHeader = cookieHeaderFromJar(jar);
+  if (!cookieHeader || !cookieHeader.includes(".ASPXAUTH=")) {
+    // Without .ASPXAUTH you will keep getting 403 on API calls.
+    throw new Error(`Genizah login did not yield auth cookies (cookies=${[...jar.keys()].join(",")})`);
   }
   genizahSessionCookie = cookieHeader;
 }
@@ -526,7 +465,38 @@ app.get("/api/genizah/auth-status", (_req, res) => {
   res.json({
     authenticated: Boolean(genizahSessionCookie || process.env.GENIZAH_COOKIE),
     source: genizahSessionCookie ? "runtime_session" : process.env.GENIZAH_COOKIE ? "env_cookie" : "none",
+    hasEnvCreds: Boolean(process.env.GENIZAH_USERNAME && process.env.GENIZAH_PASSWORD),
   });
+});
+
+app.post("/api/genizah/login/env", async (_req, res) => {
+  try {
+    const username = String(process.env.GENIZAH_USERNAME || "").trim();
+    const password = String(process.env.GENIZAH_PASSWORD || "");
+    if (!username || !password) {
+      return res.status(400).json({ error: "GENIZAH_USERNAME and GENIZAH_PASSWORD must be set on the server." });
+    }
+
+    const now = Date.now();
+    if (now - genizahLastEnvLoginAttemptAt < 10_000) {
+      return res.status(429).json({ error: "Please wait a few seconds before retrying." });
+    }
+    genizahLastEnvLoginAttemptAt = now;
+
+    await loginToGenizah(username, password);
+    res.json({
+      ok: true,
+      authenticated: true,
+      source: "runtime_session",
+      message: "Genizah env login succeeded.",
+    });
+  } catch (error) {
+    genizahSessionCookie = "";
+    res.status(401).json({
+      error: "Genizah env login failed",
+      details: error.message,
+    });
+  }
 });
 
 app.post("/api/genizah/login", async (req, res) => {
