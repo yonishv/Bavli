@@ -62,7 +62,8 @@ body {
 .layout {
   display: grid;
   grid-template-columns: 1fr 1.9fr 1fr;
-  grid-template-rows: auto minmax(0, 1fr) 260px;
+  /* Allow the bottom Genizah row to shrink on short viewports without overlapping the Gemara row. */
+  grid-template-rows: auto minmax(0, 1fr) minmax(0, 260px);
   grid-template-areas:
     "controls controls controls"
     "commentary text right"
@@ -113,7 +114,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 660px;
+  min-height: 0;
 }
 
 .genizah-panel {
@@ -266,7 +267,7 @@ button:hover {
 }
 
 .text-panel {
-  min-height: 660px;
+  min-height: 0;
   background: linear-gradient(180deg, #fffaf1 0%, #fff 100%);
 }
 

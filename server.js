@@ -8,6 +8,9 @@ const SEFARIA_BASE = "https://www.sefaria.org";
 const GENIZAH_BASE = "https://bavli.genizah.org";
 let genizahSessionCookie = "";
 let genizahLastEnvLoginAttemptAt = 0;
+let genizahLastAuthCheckAt = 0;
+let genizahLastAuthOk = false;
+let genizahLastAuthDetails = "";
 const TRACTATE_HEB = {
   Berakhot: "ברכות",
   Shabbat: "שבת",
@@ -462,11 +465,57 @@ app.get("/api/genizah/blocks/by-ref", async (req, res) => {
 });
 
 app.get("/api/genizah/auth-status", (_req, res) => {
-  res.json({
-    authenticated: Boolean(genizahSessionCookie || process.env.GENIZAH_COOKIE),
-    source: genizahSessionCookie ? "runtime_session" : process.env.GENIZAH_COOKIE ? "env_cookie" : "none",
-    hasEnvCreds: Boolean(process.env.GENIZAH_USERNAME && process.env.GENIZAH_PASSWORD),
-  });
+  const activeCookie = genizahSessionCookie || process.env.GENIZAH_COOKIE || "";
+  const source = genizahSessionCookie ? "runtime_session" : process.env.GENIZAH_COOKIE ? "env_cookie" : "none";
+
+  // Avoid hammering the upstream on repeated UI refreshes.
+  const now = Date.now();
+  const cacheTtlMs = 5000;
+  if (!activeCookie) {
+    genizahLastAuthOk = false;
+    genizahLastAuthDetails = "";
+    genizahLastAuthCheckAt = now;
+    return res.json({
+      authenticated: false,
+      source,
+      hasEnvCreds: Boolean(process.env.GENIZAH_USERNAME && process.env.GENIZAH_PASSWORD),
+      details: "",
+    });
+  }
+
+  if (now - genizahLastAuthCheckAt < cacheTtlMs) {
+    return res.json({
+      authenticated: genizahLastAuthOk,
+      source: genizahLastAuthOk ? source : "none",
+      hasEnvCreds: Boolean(process.env.GENIZAH_USERNAME && process.env.GENIZAH_PASSWORD),
+      details: genizahLastAuthOk ? "" : genizahLastAuthDetails,
+    });
+  }
+
+  genizahLastAuthCheckAt = now;
+  fetchGenizah("/api/SelectionControlAPI/GetDivisions?levelId=1&parentIds%5B0%5D=&inProjectId=&useFtsSession=false")
+    .then(() => {
+      genizahLastAuthOk = true;
+      genizahLastAuthDetails = "";
+      res.json({
+        authenticated: true,
+        source,
+        hasEnvCreds: Boolean(process.env.GENIZAH_USERNAME && process.env.GENIZAH_PASSWORD),
+        details: "",
+      });
+    })
+    .catch((error) => {
+      genizahLastAuthOk = false;
+      genizahLastAuthDetails = error?.message || "Auth check failed";
+      // If our runtime cookie is bad, clear it so the UI can re-login.
+      if (source === "runtime_session") genizahSessionCookie = "";
+      res.json({
+        authenticated: false,
+        source: "none",
+        hasEnvCreds: Boolean(process.env.GENIZAH_USERNAME && process.env.GENIZAH_PASSWORD),
+        details: genizahLastAuthDetails,
+      });
+    });
 });
 
 app.post("/api/genizah/login/env", async (_req, res) => {
