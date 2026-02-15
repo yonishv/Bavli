@@ -74,7 +74,8 @@ const SAGE_INFO = [
   { name: "רבי מנא", aliases: ["רבי מנא"], generation: "דור ד׳ לאמוראי ארץ ישראל", yeshiva: "טבריה" },
   { name: "רבי אחא ברבי חנינא", aliases: ["רבי אחא ברבי חנינא", "רבי אחא בר חנינא"], generation: "דור ג׳ לאמוראי ארץ ישראל", yeshiva: "טבריה / קיסריה" },
   { name: "רבי אחא", aliases: ["רבי אחא", "רבי אחא בר יעקב"], generation: "דור ד׳-ה׳ לאמוראי בבל", yeshiva: "פומבדיתא" },
-  { name: "רב", aliases: ["רב", "רב אבא אריכא"], generation: "דור א׳ לאמוראי בבל", yeshiva: "סורא" },
+  // NOTE: Do not match the bare title "רב" (too many false positives, e.g. "רב אחא ...").
+  { name: "רב אבא אריכא", aliases: ["רב אבא אריכא"], generation: "דור א׳ לאמוראי בבל", yeshiva: "סורא" },
   { name: "שמואל", aliases: ["שמואל", "מר שמואל"], generation: "דור א׳ לאמוראי בבל", yeshiva: "נהרדעא" },
   { name: "רב כהנא", aliases: ["רב כהנא"], generation: "דור ב׳-ג׳ לאמוראי בבל", yeshiva: "סורא / פומבדיתא" },
   { name: "רב שמואל בר יהודה", aliases: ["רב שמואל בר יהודה"], generation: "דור ג׳ לאמוראי בבל", yeshiva: "נהרדעא" },
@@ -97,6 +98,7 @@ const SAGE_INFO = [
   { name: "רב נחמן בר יצחק", aliases: ["רב נחמן בר יצחק"], generation: "דור ד׳-ה׳ לאמוראי בבל", yeshiva: "פומבדיתא" },
   { name: "רב פפא", aliases: ["רב פפא"], generation: "דור ה׳ לאמוראי בבל", yeshiva: "נרש" },
   { name: "רב אחא בר יעקב", aliases: ["רב אחא בר יעקב"], generation: "דור ד׳-ה׳ לאמוראי בבל", yeshiva: "פומבדיתא" },
+  { name: "רב אחא מדפתי", aliases: ["רב אחא מדפתי", "רב אחא מדיפתי"], generation: "אמורא (בבל)", yeshiva: "דפתי / פומבדיתא" },
   { name: "רב גידל", aliases: ["רב גידל"], generation: "דור ג׳-ד׳ לאמוראי בבל", yeshiva: "פומבדיתא" },
   { name: "רב שמן בר אבא", aliases: ["רב שמן בר אבא"], generation: "דור ג׳-ד׳ לאמוראי בבל", yeshiva: "פומבדיתא" },
   { name: "רב הונא בר יהודה", aliases: ["רב הונא בר יהודה"], generation: "דור ה׳ לאמוראי בבל", yeshiva: "מחוזא" },
@@ -276,6 +278,25 @@ function isHebrewLetterOrMark(ch) {
   return /[\u05D0-\u05EA\u0591-\u05C7]/.test(ch || "");
 }
 
+const HEB_PREFIX_LETTERS = new Set(["ו", "ב", "כ", "ל", "מ", "ש", "ה"]);
+
+function indexOfAttachedPrefixLetter(input, start) {
+  // Support prefixes attached to names, e.g. "כרבי יהושע" or "כּרבי".
+  // If there are niqqud/trop marks between the prefix letter and the start, skip them.
+  let i = start - 1;
+  while (i >= 0 && /[\u0591-\u05C7]/.test(input[i])) i -= 1;
+  if (i >= 0 && HEB_PREFIX_LETTERS.has(input[i])) return i;
+  return null;
+}
+
+function hasAllowedAttachedPrefix(input, start) {
+  const idx = indexOfAttachedPrefixLetter(input, start);
+  if (idx === null) return false;
+  const before = idx - 1 >= 0 ? input[idx - 1] : "";
+  // Allow only if the prefix letter is at a word boundary (not attached to another Hebrew letter).
+  return !isHebrewLetterOrMark(before);
+}
+
 function stripFormatting(text) {
   return normalizeDisplayText(
     decodeHtmlEntities(String(text || ""))
@@ -323,7 +344,7 @@ function enrichSageMentionsHtml(text) {
       const next = end < input.length ? input[end] : "";
 
       // Prevent partial-name matches like "רב" inside "רבי ...".
-      if (isHebrewLetterOrMark(prev) || isHebrewLetterOrMark(next)) {
+      if ((isHebrewLetterOrMark(prev) && !hasAllowedAttachedPrefix(input, start)) || isHebrewLetterOrMark(next)) {
         continue;
       }
 
