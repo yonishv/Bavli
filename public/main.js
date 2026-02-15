@@ -20,6 +20,7 @@ const tanakhListEl = document.getElementById("tanakhList");
 const sageTooltipEl = document.createElement("div");
 sageTooltipEl.className = "sage-tooltip-floating";
 document.body.appendChild(sageTooltipEl);
+let sageTooltipAnchorEl = null;
 
 let currentRef = "Berakhot.2a";
 let lockedSegmentIndex = null;
@@ -379,14 +380,16 @@ function enrichSageMentionsHtml(text) {
   return html;
 }
 
-function showSageTooltip(text, clientX, clientY) {
+function showSageTooltip(text, clientX, clientY, anchorEl = null) {
   if (!text) return;
+  sageTooltipAnchorEl = anchorEl;
   sageTooltipEl.textContent = text;
   sageTooltipEl.style.display = "block";
   positionSageTooltip(clientX, clientY);
 }
 
 function hideSageTooltip() {
+  sageTooltipAnchorEl = null;
   sageTooltipEl.style.display = "none";
 }
 
@@ -395,8 +398,21 @@ function positionSageTooltip(clientX, clientY) {
 
   const margin = 12;
   const rect = sageTooltipEl.getBoundingClientRect();
-  let left = clientX + margin;
-  let top = clientY - rect.height - margin;
+  let x = Number(clientX);
+  let y = Number(clientY);
+
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    const a = sageTooltipAnchorEl instanceof HTMLElement ? sageTooltipAnchorEl.getBoundingClientRect() : null;
+    if (!a) {
+      hideSageTooltip();
+      return;
+    }
+    x = a.left + a.width / 2;
+    y = a.top + a.height / 2;
+  }
+
+  let left = x + margin;
+  let top = y - rect.height - margin;
 
   if (left + rect.width > window.innerWidth - margin) {
     left = window.innerWidth - rect.width - margin;
@@ -1488,7 +1504,7 @@ segmentsEl.addEventListener("mouseover", (event) => {
   if (mention instanceof HTMLElement) {
     const tip = mention.dataset.sageTip || mention.getAttribute("title") || "";
     if (tip) {
-      showSageTooltip(tip, event.clientX, event.clientY);
+      showSageTooltip(tip, event.clientX, event.clientY, mention);
     }
   }
   const sentenceEl = target.closest(".sentence");
@@ -1523,7 +1539,7 @@ segmentsEl.addEventListener("mousemove", (event) => {
   const tip = mention.dataset.sageTip || mention.getAttribute("title") || "";
   if (!tip) return;
   if (sageTooltipEl.style.display === "none") {
-    showSageTooltip(tip, event.clientX, event.clientY);
+    showSageTooltip(tip, event.clientX, event.clientY, mention);
   } else {
     positionSageTooltip(event.clientX, event.clientY);
   }
