@@ -7,8 +7,8 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <main class="layout">
-      <section class="panel controls-panel">
+    <main class="layout" id="layoutGrid">
+      <section class="panel controls-panel panel-widget" data-widget-id="controls">
         <form id="loadForm" class="controls">
           <label for="tractateSelect">מסכת</label>
           <select id="tractateSelect" name="tractate"></select>
@@ -16,7 +16,11 @@
           <label for="dafSelect">דף</label>
           <select id="dafSelect" name="daf"></select>
 
-          <span class="controls-credit">פותח על ידי יוני שויקה באמצעות קודקס ג׳יפיטי. לתגובות והערות: <a href="mailto:shveka@gmail.com">shveka@gmail.com</a></span>
+          <button id="layoutEditToggleBtn" type="button" class="layout-edit-toggle-btn">שינוי פריסה</button>
+          <button id="layoutSaveBtn" type="button" class="layout-save-btn" hidden>שמירת פריסה</button>
+          <button id="layoutResetBtn" type="button" class="layout-reset-btn">איפוס פריסה</button>
+          <button id="nikudToggleBtn" type="button" class="nikud-toggle-btn is-on" aria-pressed="true">ניקוד</button>
+          <span class="controls-credit">פותח על ידי יוני שויקה באמצעות קודקס ג׳יפיטי. לתגובות והערות: <a href="mailto:shveka@gmail.com">shveka@gmail.com</a> | באתר זה נעשה שימוש בטקסטים וב-API של <a href="https://www.sefaria.org.il/texts" target="_blank" rel="noreferrer"><strong>ספריא</strong></a> ותודתי נתונה להם.</span>
         </form>
         <form id="genizahLoginForm" class="controls genizah-auth-form" autocomplete="off">
           <span class="auth-label">התחברות להכי גרסינן</span>
@@ -32,13 +36,13 @@
         <p id="status" class="status">מוכן.</p>
       </section>
 
-      <section class="panel commentary-panel">
+      <section class="panel commentary-panel panel-widget" data-widget-id="commentary">
         <h2>מפרשים לתלמוד</h2>
         <div id="commentaryCounts" class="chips"></div>
         <div id="commentaryList" class="scroll-region">רחף מעל משפט בגמרא כדי לראות פירושים.</div>
       </section>
 
-      <section class="panel text-panel">
+      <section class="panel text-panel panel-widget" data-widget-id="text">
         <div class="panel-title-row">
           <h2 id="dafTitle">טקסט הגמרא</h2>
           <a id="openSefaria" href="#" target="_blank" rel="noreferrer">פתח בספריא</a>
@@ -47,19 +51,17 @@
         <div id="segments" class="segments"></div>
       </section>
 
-      <section class="right-stack">
-        <section class="panel halakha-panel">
-          <h2>עין משפט</h2>
-          <div id="halakhaList" class="scroll-region">רחף מעל משפט בגמרא כדי לראות הפניות הלכתיות רלוונטיות.</div>
-        </section>
-
-      <section class="panel tanakh-panel">
-          <h2>תורה אור</h2>
-          <div id="tanakhList" class="scroll-region">טוען פסוקים...</div>
-        </section>
+      <section class="panel halakha-panel panel-widget" data-widget-id="halakha">
+        <h2>עין משפט</h2>
+        <div id="halakhaList" class="scroll-region">רחף מעל משפט בגמרא כדי לראות הפניות הלכתיות רלוונטיות.</div>
       </section>
 
-      <section class="panel genizah-panel">
+      <section class="panel tanakh-panel panel-widget" data-widget-id="tanakh">
+        <h2>תורה אור</h2>
+        <div id="tanakhList" class="scroll-region">טוען פסוקים...</div>
+      </section>
+
+      <section class="panel genizah-panel panel-widget" data-widget-id="genizah">
         <h2>חילופי נוסח (הכי גרסינן)</h2>
         <div id="genizahList" class="scroll-region">טוען חילופי נוסח...</div>
       </section>

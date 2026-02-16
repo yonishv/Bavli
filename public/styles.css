@@ -61,13 +61,8 @@ body {
 
 .layout {
   display: grid;
-  grid-template-columns: 1fr 1.9fr 1fr;
-  /* Allow the bottom Genizah row to shrink on short viewports without overlapping the Gemara row. */
-  grid-template-rows: auto minmax(0, 1fr) minmax(0, 260px);
-  grid-template-areas:
-    "controls controls controls"
-    "commentary text right"
-    "genizah genizah right";
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: repeat(12, minmax(0, 1fr));
   gap: 12px;
   padding: 14px 16px 16px;
   flex: 1;
@@ -83,6 +78,12 @@ body {
   box-shadow: 0 8px 26px rgba(74, 51, 25, 0.09);
 }
 
+.panel-widget {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .panel h2 {
   margin: 0 0 8px;
   font-family: "Frank Ruhl Libre", serif;
@@ -92,33 +93,30 @@ body {
 }
 
 .controls-panel {
-  grid-area: controls;
+  display: flex;
+  flex-direction: column;
 }
 
 .commentary-panel {
-  grid-area: commentary;
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
 .text-panel {
-  grid-area: text;
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
-.right-stack {
-  grid-area: right;
+.halakha-panel,
+.tanakh-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
   min-height: 0;
 }
 
 .genizah-panel {
-  grid-area: genizah;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -128,13 +126,6 @@ body {
   flex: 1;
   min-height: 0;
   height: auto;
-}
-
-.right-stack .panel {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
 }
 
 .controls-panel {
@@ -170,15 +161,115 @@ body {
   flex-wrap: wrap;
 }
 
+.layout-reset-btn {
+  background: linear-gradient(120deg, #2f687f 0%, #4f8399 100%);
+}
+
+.layout-edit-toggle-btn {
+  background: linear-gradient(120deg, #3f6e32 0%, #5d8e4d 100%);
+}
+
+.layout-save-btn {
+  background: linear-gradient(120deg, #2d7f61 0%, #44a07c 100%);
+}
+
+.nikud-toggle-btn {
+  background: linear-gradient(120deg, #3a4f86 0%, #5874b0 100%);
+}
+
+.nikud-toggle-btn.is-off {
+  background: linear-gradient(120deg, #6b6f7e 0%, #8a8e9a 100%);
+}
+
 .controls-credit {
-  font-size: 0.92rem;
+  margin-inline-start: auto;
+  text-align: right;
+  font-size: 0.88rem;
   color: var(--muted);
   line-height: 1.4;
+  white-space: nowrap;
 }
 
 .controls-credit a {
-  color: inherit;
+  color: var(--brand-2);
   text-decoration: underline;
+}
+
+.panel-drag-handle,
+.panel-resize-handle,
+.panel-resize-y-handle,
+.panel-resize-x-handle {
+  position: absolute;
+  z-index: 6;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+body.layout-edit-mode .panel-widget .panel-drag-handle,
+body.layout-edit-mode .panel-widget .panel-resize-handle,
+body.layout-edit-mode .panel-widget .panel-resize-y-handle,
+body.layout-edit-mode .panel-widget .panel-resize-x-handle {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.panel-drag-handle {
+  top: 6px;
+  left: 8px;
+  width: 44px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(31, 95, 122, 0.18);
+  border: 1px solid rgba(31, 95, 122, 0.35);
+  cursor: grab;
+}
+
+.panel-drag-handle::before {
+  content: "";
+  position: absolute;
+  inset: 6px 10px;
+  border-top: 2px solid rgba(31, 95, 122, 0.72);
+  border-bottom: 2px solid rgba(31, 95, 122, 0.72);
+}
+
+.panel-resize-handle {
+  left: 8px;
+  bottom: 8px;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background:
+    linear-gradient(135deg, transparent 0 33%, rgba(31, 95, 122, 0.65) 33% 42%, transparent 42% 58%, rgba(31, 95, 122, 0.65) 58% 67%, transparent 67% 100%);
+  border: 1px solid rgba(31, 95, 122, 0.45);
+  cursor: nwse-resize;
+}
+
+.panel-resize-y-handle {
+  left: 28px;
+  right: 28px;
+  bottom: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(31, 95, 122, 0.35);
+  background: rgba(31, 95, 122, 0.18);
+  cursor: ns-resize;
+}
+
+.panel-resize-x-handle {
+  left: 8px;
+  top: 28px;
+  bottom: 28px;
+  width: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(31, 95, 122, 0.35);
+  background: rgba(31, 95, 122, 0.18);
+  cursor: ew-resize;
+}
+
+body.layout-dragging {
+  user-select: none;
+  cursor: grabbing;
 }
 
 .controls label {
@@ -243,6 +334,14 @@ button:hover {
 }
 
 .genizah-auth-form.connected .genizah-credentials {
+  display: none;
+}
+
+.genizah-auth-form.connected .auth-label {
+  display: none;
+}
+
+.genizah-auth-form.connected {
   display: none;
 }
 
@@ -395,7 +494,8 @@ button.chip:disabled {
   height: auto;
 }
 
-.right-stack .scroll-region {
+.halakha-panel .scroll-region,
+.tanakh-panel .scroll-region {
   flex: 1;
   min-height: 0;
   height: auto;

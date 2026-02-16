@@ -17,6 +17,11 @@ const commentaryListEl = document.getElementById("commentaryList");
 const genizahListEl = document.getElementById("genizahList");
 const halakhaListEl = document.getElementById("halakhaList");
 const tanakhListEl = document.getElementById("tanakhList");
+const layoutGridEl = document.getElementById("layoutGrid");
+const layoutEditToggleBtn = document.getElementById("layoutEditToggleBtn");
+const layoutSaveBtn = document.getElementById("layoutSaveBtn");
+const layoutResetBtn = document.getElementById("layoutResetBtn");
+const nikudToggleBtn = document.getElementById("nikudToggleBtn");
 const sageTooltipEl = document.createElement("div");
 sageTooltipEl.className = "sage-tooltip-floating";
 document.body.appendChild(sageTooltipEl);
@@ -35,7 +40,36 @@ let commentaryCategory = "rt"; // rt | rishonim | acharonim | meiri
 let commentaryToken = 0;
 let halakhaToken = 0;
 let tanakhToken = 0;
+let genizahConnected = false;
+let layoutEditMode = false;
 const refTextCache = new Map();
+const LAYOUT_STORAGE_KEY = "bavli.layout.v1";
+const NIKUD_STORAGE_KEY = "bavli.nikud.v1";
+const GRID_COLS = 12;
+const GRID_ROWS = 12;
+const WIDGET_IDS = ["controls", "commentary", "text", "halakha", "tanakh", "genizah"];
+const MOVABLE_WIDGET_IDS = ["commentary", "text", "halakha", "tanakh", "genizah"];
+const WIDGET_LABELS_HE = {
+  controls: "בחירה וחיבור",
+  commentary: "מפרשים",
+  text: "טקסט הגמרא",
+  halakha: "עין משפט",
+  tanakh: "תורה אור",
+  genizah: "חילופי נוסח",
+};
+const DEFAULT_LAYOUT = {
+  controls: { col: 1, row: 1, colSpan: 12, rowSpan: 2 },
+  // Reference layout (as in screenshot):
+  // Top row: Ein Mishpat (left) | Gemara (center) | Commentary (right)
+  // Bottom row: Torah Or (left) | Genizah (center+right)
+  commentary: { col: 1, row: 3, colSpan: 3, rowSpan: 7 },
+  text: { col: 4, row: 3, colSpan: 6, rowSpan: 7 },
+  halakha: { col: 10, row: 3, colSpan: 3, rowSpan: 5 },
+  tanakh: { col: 10, row: 8, colSpan: 3, rowSpan: 5 },
+  genizah: { col: 1, row: 10, colSpan: 9, rowSpan: 3 },
+};
+let currentLayout = cloneLayout(DEFAULT_LAYOUT);
+let showNikud = true;
 const SAGE_INFO = [
   { name: "רבן יוחנן בן זכאי", aliases: ["רבן יוחנן בן זכאי"], generation: "דור א׳ לתנאים", yeshiva: "יבנה" },
   { name: "רבן גמליאל", aliases: ["רבן גמליאל", "רבן גמליאל דיבנה"], generation: "דור ב׳ לתנאים", yeshiva: "יבנה" },
@@ -155,9 +189,275 @@ function setStatus(message) {
 }
 
 function setGenizahAuthStatus(message, connected = false) {
+  genizahConnected = Boolean(connected);
   genizahAuthStatusEl.textContent = message;
   genizahAuthStatusEl.classList.toggle("connected", connected);
   genizahLoginForm?.classList?.toggle("connected", connected);
+  applyLayout(currentLayout);
+}
+
+function cloneLayout(layout) {
+  const out = {};
+  for (const id of WIDGET_IDS) {
+    const raw = layout?.[id] || DEFAULT_LAYOUT[id];
+    out[id] = {
+      col: Number(raw.col) || DEFAULT_LAYOUT[id].col,
+      row: Number(raw.row) || DEFAULT_LAYOUT[id].row,
+      colSpan: Number(raw.colSpan) || DEFAULT_LAYOUT[id].colSpan,
+      rowSpan: Number(raw.rowSpan) || DEFAULT_LAYOUT[id].rowSpan,
+    };
+  }
+  return out;
+}
+
+function isValidRect(r) {
+  if (!r) return false;
+  if (![r.col, r.row, r.colSpan, r.rowSpan].every((n) => Number.isFinite(n))) return false;
+  if (r.col < 1 || r.row < 1 || r.colSpan < 1 || r.rowSpan < 1) return false;
+  if (r.col + r.colSpan - 1 > GRID_COLS) return false;
+  if (r.row + r.rowSpan - 1 > GRID_ROWS) return false;
+  return true;
+}
+
+function overlap(a, b) {
+  const aRight = a.col + a.colSpan;
+  const bRight = b.col + b.colSpan;
+  const aBottom = a.row + a.rowSpan;
+  const bBottom = b.row + b.rowSpan;
+  return a.col < bRight && aRight > b.col && a.row < bBottom && aBottom > b.row;
+}
+
+function validateLayout(layout) {
+  for (const id of WIDGET_IDS) {
+    if (!isValidRect(layout[id])) {
+      return { ok: false, error: `ערכים לא תקינים עבור "${WIDGET_LABELS_HE[id] || id}"` };
+    }
+  }
+
+  for (let i = 0; i < WIDGET_IDS.length; i += 1) {
+    for (let j = i + 1; j < WIDGET_IDS.length; j += 1) {
+      const a = WIDGET_IDS[i];
+      const b = WIDGET_IDS[j];
+      if (overlap(layout[a], layout[b])) {
+        return {
+          ok: false,
+          error: `חפיפה בין "${WIDGET_LABELS_HE[a] || a}" לבין "${WIDGET_LABELS_HE[b] || b}"`,
+        };
+      }
+    }
+  }
+
+  return { ok: true, error: "" };
+}
+
+function applyLayout(layout) {
+  let effective = cloneLayout(layout);
+
+  if (genizahConnected) {
+    // Collapse top auth row but keep Genizah anchored at the bottom.
+    effective.controls.rowSpan = 1;
+    const genizahOriginalRow = layout.genizah.row;
+
+    for (const id of WIDGET_IDS) {
+      if (id === "controls" || id === "genizah") continue;
+      effective[id].row = Math.max(1, layout[id].row - 1);
+    }
+    effective.genizah.row = genizahOriginalRow;
+
+    // Use the freed row to enlarge upper panels when possible, without overlaps.
+    const growOrder = ["commentary", "text", "tanakh", "halakha"];
+    for (const id of growOrder) {
+      const trial = cloneLayout(effective);
+      trial[id].rowSpan += 1;
+      if (validateLayout(trial).ok) {
+        effective = trial;
+      }
+    }
+  }
+
+  for (const id of WIDGET_IDS) {
+    const rect = effective[id];
+    const el = layoutGridEl?.querySelector(`[data-widget-id="${id}"]`);
+    if (!(el instanceof HTMLElement) || !rect) continue;
+    el.style.gridColumn = `${rect.col} / span ${rect.colSpan}`;
+    el.style.gridRow = `${rect.row} / span ${rect.rowSpan}`;
+  }
+}
+
+function saveLayout(layout) {
+  try {
+    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(layout));
+  } catch {
+    // ignore storage quota/privacy mode errors
+  }
+}
+
+function setLayoutEditMode(enabled) {
+  layoutEditMode = Boolean(enabled);
+  document.body.classList.toggle("layout-edit-mode", layoutEditMode);
+  if (layoutSaveBtn instanceof HTMLButtonElement) {
+    layoutSaveBtn.hidden = !layoutEditMode;
+    layoutSaveBtn.disabled = !layoutEditMode;
+  }
+  if (layoutEditToggleBtn instanceof HTMLButtonElement) {
+    layoutEditToggleBtn.hidden = layoutEditMode;
+  }
+}
+
+function loadStoredLayout() {
+  try {
+    const raw = localStorage.getItem(LAYOUT_STORAGE_KEY);
+    if (!raw) return cloneLayout(DEFAULT_LAYOUT);
+    const parsed = JSON.parse(raw);
+    const candidate = cloneLayout(parsed);
+    const check = validateLayout(candidate);
+    if (!check.ok) return cloneLayout(DEFAULT_LAYOUT);
+    return candidate;
+  } catch {
+    return cloneLayout(DEFAULT_LAYOUT);
+  }
+}
+
+function initMouseLayoutEditing() {
+  if (!(layoutGridEl instanceof HTMLElement)) return;
+
+  function getGridMetrics() {
+    const rect = layoutGridEl.getBoundingClientRect();
+    const styles = window.getComputedStyle(layoutGridEl);
+    const colGap = Number.parseFloat(styles.columnGap) || 0;
+    const rowGap = Number.parseFloat(styles.rowGap) || 0;
+    const colSize = (rect.width - colGap * (GRID_COLS - 1)) / GRID_COLS;
+    const rowSize = (rect.height - rowGap * (GRID_ROWS - 1)) / GRID_ROWS;
+    return {
+      colStep: Math.max(1, colSize + colGap),
+      rowStep: Math.max(1, rowSize + rowGap),
+    };
+  }
+
+  function clampRect(r) {
+    const out = { ...r };
+    out.colSpan = Math.max(1, Math.min(out.colSpan, GRID_COLS));
+    out.rowSpan = Math.max(1, Math.min(out.rowSpan, GRID_ROWS));
+    out.col = Math.max(1, Math.min(out.col, GRID_COLS - out.colSpan + 1));
+    out.row = Math.max(1, Math.min(out.row, GRID_ROWS - out.rowSpan + 1));
+    return out;
+  }
+
+  function beginPointer(id, mode, ev) {
+    if (!layoutEditMode) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const start = currentLayout[id];
+    if (!start) return;
+
+    const startX = ev.clientX;
+    const startY = ev.clientY;
+    const { colStep, rowStep } = getGridMetrics();
+    let preview = null;
+
+    function applyLeftEdgeHorizontalResize(baseRect, deltaX) {
+      // Handles are on the left edge (bottom-left corner and left side),
+      // so dragging inward from the left (to the right) shrinks by removing left area,
+      // while the visual right edge stays anchored.
+      const out = { ...baseRect };
+      // Keep start column fixed (right edge anchor in this RTL grid).
+      out.col = baseRect.col;
+      out.colSpan = baseRect.colSpan - deltaX;
+      return out;
+    }
+
+    const onMove = (e) => {
+      const dx = Math.round((e.clientX - startX) / colStep);
+      const dy = Math.round((e.clientY - startY) / rowStep);
+      let next = { ...start };
+
+      if (mode === "move") {
+        // RTL grid: invert horizontal move so drag direction feels natural.
+        next.col = start.col - dx;
+        next.row = start.row + dy;
+      } else if (mode === "resize") {
+        next = applyLeftEdgeHorizontalResize(next, dx);
+        next.rowSpan = start.rowSpan + dy;
+      } else if (mode === "resizeY") {
+        next.rowSpan = start.rowSpan + dy;
+      } else if (mode === "resizeX") {
+        next = applyLeftEdgeHorizontalResize(next, dx);
+      }
+      next = clampRect(next);
+
+      let candidate = cloneLayout(currentLayout);
+      candidate[id] = next;
+      let check = validateLayout(candidate);
+      if (!check.ok && mode === "resize") {
+        // If diagonal resize is blocked, try each axis independently so vertical resize is not
+        // dropped due to tiny horizontal movement (and vice versa).
+        const yOnly = cloneLayout(currentLayout);
+        yOnly[id] = clampRect({ ...start, rowSpan: start.rowSpan + dy });
+        const yCheck = validateLayout(yOnly);
+
+        const xOnly = cloneLayout(currentLayout);
+        xOnly[id] = clampRect(applyLeftEdgeHorizontalResize(start, dx));
+        const xCheck = validateLayout(xOnly);
+
+        if (!yCheck.ok && !xCheck.ok) return;
+        if (Math.abs(dy) >= Math.abs(dx)) {
+          candidate = yCheck.ok ? yOnly : xOnly;
+        } else {
+          candidate = xCheck.ok ? xOnly : yOnly;
+        }
+        check = validateLayout(candidate);
+      }
+      if (!check.ok) return;
+
+      preview = candidate;
+      applyLayout(candidate);
+    };
+
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove, true);
+      window.removeEventListener("mouseup", onUp, true);
+      document.body.classList.remove("layout-dragging");
+      if (preview) {
+        currentLayout = preview;
+      } else {
+        applyLayout(currentLayout);
+      }
+    };
+
+    document.body.classList.add("layout-dragging");
+    window.addEventListener("mousemove", onMove, true);
+    window.addEventListener("mouseup", onUp, true);
+  }
+
+  for (const id of MOVABLE_WIDGET_IDS) {
+    const panel = layoutGridEl.querySelector(`[data-widget-id="${id}"]`);
+    if (!(panel instanceof HTMLElement)) continue;
+
+    const drag = document.createElement("div");
+    drag.className = "panel-drag-handle";
+    drag.title = `גרירת חלון: ${WIDGET_LABELS_HE[id] || id}`;
+    drag.addEventListener("mousedown", (ev) => beginPointer(id, "move", ev));
+
+    const resize = document.createElement("div");
+    resize.className = "panel-resize-handle";
+    resize.title = `שינוי גודל: ${WIDGET_LABELS_HE[id] || id}`;
+    resize.addEventListener("mousedown", (ev) => beginPointer(id, "resize", ev));
+
+    const resizeY = document.createElement("div");
+    resizeY.className = "panel-resize-y-handle";
+    resizeY.title = `שינוי גובה: ${WIDGET_LABELS_HE[id] || id}`;
+    resizeY.addEventListener("mousedown", (ev) => beginPointer(id, "resizeY", ev));
+
+    const resizeX = document.createElement("div");
+    resizeX.className = "panel-resize-x-handle";
+    resizeX.title = `שינוי רוחב: ${WIDGET_LABELS_HE[id] || id}`;
+    resizeX.addEventListener("mousedown", (ev) => beginPointer(id, "resizeX", ev));
+
+    panel.appendChild(drag);
+    panel.appendChild(resize);
+    panel.appendChild(resizeY);
+    panel.appendChild(resizeX);
+  }
 }
 
 function normalizeRef(rawRef) {
@@ -219,6 +519,14 @@ function normalizeDisplayText(text) {
     .replace(/\u00A0/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function stripNikud(text) {
+  return String(text || "").replace(/[\u0591-\u05C7]/g, "");
+}
+
+function displayHebrewText(text) {
+  return showNikud ? String(text || "") : stripNikud(text);
 }
 
 function escapeRegExp(text) {
@@ -1185,8 +1493,10 @@ function buildLcsMatchMask(baseTokens, otherTokens) {
 }
 
 function renderWitnessDiffHtml(baseText, witnessText, isBase) {
-  const baseTokens = tokenizeWords(baseText);
-  const witnessTokens = tokenizeWords(witnessText);
+  const shownBaseText = displayHebrewText(baseText);
+  const shownWitnessText = displayHebrewText(witnessText);
+  const baseTokens = tokenizeWords(shownBaseText);
+  const witnessTokens = tokenizeWords(shownWitnessText);
   if (!witnessTokens.length) return "";
   if (isBase) return witnessTokens.map((t) => safeHtml(t)).join(" ");
 
@@ -1269,9 +1579,22 @@ async function refreshGenizahAuthStatus() {
         env_cookie: "מחובר (Cookie מהשרת)",
       };
       setGenizahAuthStatus(sourceMap[payload.source] || "מחובר", true);
-    } else {
-      setGenizahAuthStatus("לא מחובר", false);
+      return;
     }
+
+    // Auto-login using server-side env creds (no user input required in UI).
+    if (payload?.hasEnvCreds) {
+      try {
+        await postJson("/api/genizah/login/env", {});
+        setGenizahAuthStatus("מחובר (Session)", true);
+        return;
+      } catch (error) {
+        setGenizahAuthStatus(`התחברות אוטומטית נכשלה: ${error.message}`, false);
+        return;
+      }
+    }
+
+    setGenizahAuthStatus("לא מחובר", false);
   } catch {
     setGenizahAuthStatus("מצב התחברות לא זמין", false);
   }
@@ -1310,7 +1633,7 @@ function renderFluentText(baseRef, segments) {
     span.className = "sentence";
     span.dataset.segment = String(seg.index);
     span.title = `${baseRef}:${seg.index}`;
-    span.innerHTML = `${enrichSageMentionsHtml(seg.he)} `;
+    span.innerHTML = `${enrichSageMentionsHtml(displayHebrewText(seg.he))} `;
     wrapper.appendChild(span);
   }
 
@@ -1322,6 +1645,39 @@ function highlightLockedSentence() {
   if (!lockedSegmentIndex) return;
   const locked = segmentsEl.querySelector(`.sentence[data-segment="${lockedSegmentIndex}"]`);
   if (locked) locked.classList.add("locked");
+}
+
+async function rerenderVisiblePanels() {
+  renderFluentText(currentRef, currentSegments);
+  highlightLockedSentence();
+  await renderPanelsForSegment(lockedSegmentIndex, Boolean(lockedSegmentIndex));
+  await renderTanakhPanel(pageTanakhRefs);
+}
+
+function updateNikudToggleUi() {
+  if (!(nikudToggleBtn instanceof HTMLButtonElement)) return;
+  nikudToggleBtn.classList.toggle("is-off", !showNikud);
+  nikudToggleBtn.classList.toggle("is-on", showNikud);
+  nikudToggleBtn.setAttribute("aria-pressed", showNikud ? "true" : "false");
+}
+
+function loadNikudPreference() {
+  try {
+    const raw = localStorage.getItem(NIKUD_STORAGE_KEY);
+    if (raw === "0") return false;
+    if (raw === "1") return true;
+  } catch {
+    // ignore storage issues
+  }
+  return true;
+}
+
+function saveNikudPreference() {
+  try {
+    localStorage.setItem(NIKUD_STORAGE_KEY, showNikud ? "1" : "0");
+  } catch {
+    // ignore storage issues
+  }
 }
 
 async function renderRefCards(container, refs, tokenType) {
@@ -1367,18 +1723,18 @@ async function renderRefCards(container, refs, tokenType) {
       const main = goodParts[0];
       card.dataset.ref = main.ref;
       const piecesHtml = goodParts
-        .map((p) => `<p class="ref-text rashi-piece">${formatDiburHamatchilHtml(p.full)}</p>`)
+        .map((p) => `<p class="ref-text rashi-piece">${formatDiburHamatchilHtml(displayHebrewText(p.full))}</p>`)
         .join("");
       card.innerHTML = `
-        <p class="ref-title">${safeHtml(main.displayRef || main.ref)}</p>
+        <p class="ref-title">${safeHtml(displayHebrewText(main.displayRef || main.ref))}</p>
         ${piecesHtml}
       `;
     } else {
       const main = goodParts[0];
       card.dataset.ref = main.ref;
       card.innerHTML = `
-        <p class="ref-title">${safeHtml(main.displayRef || main.ref)}</p>
-        <p class="ref-text">${safeHtml(main.full)}</p>
+        <p class="ref-title">${safeHtml(displayHebrewText(main.displayRef || main.ref))}</p>
+        <p class="ref-text">${safeHtml(displayHebrewText(main.full))}</p>
       `;
     }
 
@@ -1408,8 +1764,8 @@ async function renderTanakhPanel(refs) {
     const card = document.createElement("article");
     card.className = "ref-card";
     card.innerHTML = `
-      <p class="ref-title">${safeHtml(t.displayRef || t.ref)}</p>
-      <p class="ref-text">${safeHtml(t.full)}</p>
+      <p class="ref-title">${safeHtml(displayHebrewText(t.displayRef || t.ref))}</p>
+      <p class="ref-text">${safeHtml(displayHebrewText(t.full))}</p>
     `;
     tanakhListEl.appendChild(card);
   }
@@ -1581,6 +1937,45 @@ genizahLoginForm.addEventListener("submit", (event) => {
       genizahLoginBtn.textContent = originalBtn;
     });
 });
+
+currentLayout = loadStoredLayout();
+applyLayout(currentLayout);
+initMouseLayoutEditing();
+
+if (layoutResetBtn instanceof HTMLButtonElement) {
+  layoutResetBtn.addEventListener("click", () => {
+    currentLayout = cloneLayout(DEFAULT_LAYOUT);
+    applyLayout(currentLayout);
+    saveLayout(currentLayout);
+  });
+}
+
+if (layoutEditToggleBtn instanceof HTMLButtonElement) {
+  layoutEditToggleBtn.addEventListener("click", () => {
+    setLayoutEditMode(true);
+  });
+}
+
+if (layoutSaveBtn instanceof HTMLButtonElement) {
+  layoutSaveBtn.addEventListener("click", () => {
+    saveLayout(currentLayout);
+    setLayoutEditMode(false);
+  });
+}
+
+showNikud = loadNikudPreference();
+updateNikudToggleUi();
+
+if (nikudToggleBtn instanceof HTMLButtonElement) {
+  nikudToggleBtn.addEventListener("click", () => {
+    showNikud = !showNikud;
+    updateNikudToggleUi();
+    saveNikudPreference();
+    void rerenderVisiblePanels();
+  });
+}
+
+setLayoutEditMode(false);
 
 populateTractateOptions();
 tractateSelect.value = "Berakhot";
