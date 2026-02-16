@@ -70,6 +70,10 @@ body {
   overflow: hidden;
 }
 
+body.genizah-connected .layout {
+  grid-template-rows: auto repeat(11, minmax(0, 1fr));
+}
+
 .panel {
   background: linear-gradient(180deg, var(--paper-strong) 0%, var(--paper) 100%);
   border: 1px solid var(--line);
@@ -95,6 +99,23 @@ body {
 .controls-panel {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+.controls-panel.connected-compact {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.controls-panel.connected-compact .controls {
+  gap: 8px;
+}
+
+.controls-panel.connected-compact select,
+.controls-panel.connected-compact input,
+.controls-panel.connected-compact button {
+  padding-top: 6px;
+  padding-bottom: 6px;
 }
 
 .commentary-panel {
@@ -158,7 +179,13 @@ body {
   display: flex;
   gap: 10px;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
 }
 
 .layout-reset-btn {
@@ -188,11 +215,42 @@ body {
   color: var(--muted);
   line-height: 1.4;
   white-space: nowrap;
+  min-width: max-content;
+  flex: 0 0 auto;
 }
 
 .controls-credit a {
   color: var(--brand-2);
   text-decoration: underline;
+}
+
+@media (max-width: 1280px) {
+  .controls-credit {
+    margin-inline-start: auto;
+  }
+}
+
+@media (max-width: 860px) {
+  select,
+  input,
+  button {
+    font-size: 0.88rem;
+    padding: 6px 10px;
+  }
+
+  select,
+  input {
+    min-width: 120px;
+  }
+
+  .controls {
+    gap: 8px;
+  }
+
+  .controls-credit {
+    min-width: max-content;
+    font-size: 0.82rem;
+  }
 }
 
 .panel-drag-handle,

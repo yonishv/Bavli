@@ -18,6 +18,7 @@ const genizahListEl = document.getElementById("genizahList");
 const halakhaListEl = document.getElementById("halakhaList");
 const tanakhListEl = document.getElementById("tanakhList");
 const layoutGridEl = document.getElementById("layoutGrid");
+const controlsPanelEl = layoutGridEl?.querySelector('[data-widget-id="controls"]');
 const layoutEditToggleBtn = document.getElementById("layoutEditToggleBtn");
 const layoutSaveBtn = document.getElementById("layoutSaveBtn");
 const layoutResetBtn = document.getElementById("layoutResetBtn");
@@ -185,14 +186,18 @@ const TRACTATE_MAX_DAF = {
 };
 
 function setStatus(message) {
-  statusEl.textContent = message;
+  const text = String(message || "").trim();
+  statusEl.textContent = text;
+  statusEl.hidden = !text;
 }
 
 function setGenizahAuthStatus(message, connected = false) {
   genizahConnected = Boolean(connected);
+  document.body.classList.toggle("genizah-connected", genizahConnected);
   genizahAuthStatusEl.textContent = message;
   genizahAuthStatusEl.classList.toggle("connected", connected);
   genizahLoginForm?.classList?.toggle("connected", connected);
+  controlsPanelEl?.classList?.toggle("connected-compact", connected);
   applyLayout(currentLayout);
 }
 
@@ -251,28 +256,31 @@ function validateLayout(layout) {
 }
 
 function applyLayout(layout) {
-  let effective = cloneLayout(layout);
+  const effective = cloneLayout(layout);
+  const baseControlsRows = Math.max(1, Number(layout?.controls?.rowSpan) || 1);
 
   if (genizahConnected) {
-    // Collapse top auth row but keep Genizah anchored at the bottom.
-    effective.controls.rowSpan = 1;
-    const genizahOriginalRow = layout.genizah.row;
+    // Connected mode must always be a single top line.
+    const desiredControlsRows = 1;
+    const rowShift = desiredControlsRows - baseControlsRows;
+    effective.controls.rowSpan = desiredControlsRows;
 
-    for (const id of WIDGET_IDS) {
-      if (id === "controls" || id === "genizah") continue;
-      effective[id].row = Math.max(1, layout[id].row - 1);
-    }
-    effective.genizah.row = genizahOriginalRow;
-
-    // Use the freed row to enlarge upper panels when possible, without overlaps.
-    const growOrder = ["commentary", "text", "tanakh", "halakha"];
-    for (const id of growOrder) {
-      const trial = cloneLayout(effective);
-      trial[id].rowSpan += 1;
-      if (validateLayout(trial).ok) {
-        effective = trial;
+    if (rowShift !== 0) {
+      for (const id of WIDGET_IDS) {
+        if (id === "controls") continue;
+        const rect = effective[id];
+        const maxRow = GRID_ROWS - rect.rowSpan + 1;
+        rect.row = Math.min(maxRow, Math.max(1, rect.row + rowShift));
       }
     }
+  } else {
+    // Unauthenticated mode needs room for credentials row.
+    effective.controls.rowSpan = Math.max(2, baseControlsRows);
+  }
+
+  const check = validateLayout(effective);
+  if (!check.ok) {
+    return applyStaticLayout(layout);
   }
 
   for (const id of WIDGET_IDS) {
@@ -282,6 +290,71 @@ function applyLayout(layout) {
     el.style.gridColumn = `${rect.col} / span ${rect.colSpan}`;
     el.style.gridRow = `${rect.row} / span ${rect.rowSpan}`;
   }
+}
+
+function applyStaticLayout(layout) {
+  for (const id of WIDGET_IDS) {
+    const rect = layout[id];
+    const el = layoutGridEl?.querySelector(`[data-widget-id="${id}"]`);
+    if (!(el instanceof HTMLElement) || !rect) continue;
+    el.style.gridColumn = `${rect.col} / span ${rect.colSpan}`;
+    el.style.gridRow = `${rect.row} / span ${rect.rowSpan}`;
+  }
+}
+
+function estimateNeededControlRows() {
+  if (!(layoutGridEl instanceof HTMLElement) || !(controlsPanelEl instanceof HTMLElement)) return 1;
+
+  const gridRect = layoutGridEl.getBoundingClientRect();
+  const styles = window.getComputedStyle(layoutGridEl);
+  const rowGap = Number.parseFloat(styles.rowGap) || 0;
+  const colGap = Number.parseFloat(styles.columnGap) || 0;
+  const rowTrack = (gridRect.height - rowGap * (GRID_ROWS - 1)) / GRID_ROWS;
+  const colTrack = (gridRect.width - colGap * (GRID_COLS - 1)) / GRID_COLS;
+  const controlsWidth = colTrack * GRID_COLS + colGap * (GRID_COLS - 1);
+
+  if (!Number.isFinite(rowTrack) || rowTrack <= 0 || !Number.isFinite(controlsWidth) || controlsWidth <= 0) {
+    return 1;
+  }
+
+  const prevPanelWidth = controlsPanelEl.style.width;
+  const prevPanelMaxWidth = controlsPanelEl.style.maxWidth;
+  const prevLoadWidth = loadForm.style.width;
+  const prevLoadMaxWidth = loadForm.style.maxWidth;
+  const prevAuthWidth = genizahLoginForm.style.width;
+  const prevAuthMaxWidth = genizahLoginForm.style.maxWidth;
+
+  controlsPanelEl.style.width = `${controlsWidth}px`;
+  controlsPanelEl.style.maxWidth = `${controlsWidth}px`;
+  loadForm.style.width = "100%";
+  loadForm.style.maxWidth = "100%";
+  genizahLoginForm.style.width = "100%";
+  genizahLoginForm.style.maxWidth = "100%";
+
+  // Measure intrinsic content blocks, not panel scrollHeight (which can be inflated by grid stretching).
+  const panelStyles = window.getComputedStyle(controlsPanelEl);
+  const panelPaddingTop = Number.parseFloat(panelStyles.paddingTop) || 0;
+  const panelPaddingBottom = Number.parseFloat(panelStyles.paddingBottom) || 0;
+
+  const loadHeight = loadForm.offsetHeight || 0;
+  const authVisible = !genizahLoginForm.classList.contains("connected");
+  const authHeight = authVisible ? (genizahLoginForm.offsetHeight || 0) : 0;
+  const statusHeight = statusEl.hidden ? 0 : (statusEl.offsetHeight || 0);
+  const gapAfterLoad = authHeight || statusHeight ? 10 : 0;
+  const neededHeight = panelPaddingTop + loadHeight + gapAfterLoad + authHeight + statusHeight + panelPaddingBottom + 4;
+
+  controlsPanelEl.style.width = prevPanelWidth;
+  controlsPanelEl.style.maxWidth = prevPanelMaxWidth;
+  loadForm.style.width = prevLoadWidth;
+  loadForm.style.maxWidth = prevLoadMaxWidth;
+  genizahLoginForm.style.width = prevAuthWidth;
+  genizahLoginForm.style.maxWidth = prevAuthMaxWidth;
+
+  for (let rows = 1; rows <= GRID_ROWS; rows += 1) {
+    const spanHeight = rows * rowTrack + (rows - 1) * rowGap;
+    if (spanHeight >= neededHeight) return rows;
+  }
+  return GRID_ROWS;
 }
 
 function saveLayout(layout) {
@@ -522,7 +595,8 @@ function normalizeDisplayText(text) {
 }
 
 function stripNikud(text) {
-  return String(text || "").replace(/[\u0591-\u05C7]/g, "");
+  // Remove niqqud/cantillation marks but keep punctuation like maqaf (U+05BE) and all dashes.
+  return String(text || "").replace(/[\u0591-\u05AF\u05B0-\u05BC\u05C1-\u05C2\u05C4-\u05C5\u05C7]/g, "");
 }
 
 function displayHebrewText(text) {
@@ -1976,6 +2050,15 @@ if (nikudToggleBtn instanceof HTMLButtonElement) {
 }
 
 setLayoutEditMode(false);
+
+let pendingLayoutResizeRaf = 0;
+window.addEventListener("resize", () => {
+  if (pendingLayoutResizeRaf) return;
+  pendingLayoutResizeRaf = window.requestAnimationFrame(() => {
+    pendingLayoutResizeRaf = 0;
+    applyLayout(currentLayout);
+  });
+});
 
 populateTractateOptions();
 tractateSelect.value = "Berakhot";
