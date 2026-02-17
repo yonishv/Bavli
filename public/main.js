@@ -1,6 +1,7 @@
 const loadForm = document.getElementById("loadForm");
 const tractateSelect = document.getElementById("tractateSelect");
 const dafSelect = document.getElementById("dafSelect");
+const dafYomiBtn = document.getElementById("dafYomiBtn");
 const genizahLoginForm = document.getElementById("genizahLoginForm");
 const genizahUsernameEl = document.getElementById("genizahUsername");
 const genizahPasswordEl = document.getElementById("genizahPassword");
@@ -193,6 +194,9 @@ const TRACTATE_MAX_DAF = {
   Middot: 4,
   Niddah: 73,
 };
+
+const selectMeasureCanvas = document.createElement("canvas");
+const selectMeasureCtx = selectMeasureCanvas.getContext("2d");
 
 function setStatus(message) {
   const text = String(message || "").trim();
@@ -1182,6 +1186,40 @@ function buildRef() {
   return `${tractateSelect.value}.${dafSelect.value}`;
 }
 
+function fitSelectWidthToOptions(selectEl) {
+  if (!(selectEl instanceof HTMLSelectElement) || !selectMeasureCtx) return;
+  const style = window.getComputedStyle(selectEl);
+  const font = style.font || `${style.fontSize} ${style.fontFamily}`;
+  selectMeasureCtx.font = font;
+
+  let maxTextWidth = 0;
+  for (const option of selectEl.options) {
+    const text = option.textContent || "";
+    const width = selectMeasureCtx.measureText(text).width;
+    if (width > maxTextWidth) maxTextWidth = width;
+  }
+
+  const paddingInlineStart = Number.parseFloat(style.paddingInlineStart || style.paddingLeft || "0") || 0;
+  const paddingInlineEnd = Number.parseFloat(style.paddingInlineEnd || style.paddingRight || "0") || 0;
+  const borderInlineStart = Number.parseFloat(style.borderInlineStartWidth || style.borderLeftWidth || "0") || 0;
+  const borderInlineEnd = Number.parseFloat(style.borderInlineEndWidth || style.borderRightWidth || "0") || 0;
+  const dropdownArrowReserve = 28;
+  const widthPx = Math.ceil(
+    maxTextWidth +
+      paddingInlineStart +
+      paddingInlineEnd +
+      borderInlineStart +
+      borderInlineEnd +
+      dropdownArrowReserve
+  );
+  selectEl.style.width = `${Math.max(widthPx, 60)}px`;
+}
+
+function fitHeaderSelectWidths() {
+  fitSelectWidthToOptions(tractateSelect);
+  fitSelectWidthToOptions(dafSelect);
+}
+
 function populateTractateOptions() {
   tractateSelect.innerHTML = "";
   for (const tractate of Object.keys(TRACTATE_MAX_DAF)) {
@@ -1190,6 +1228,7 @@ function populateTractateOptions() {
     option.textContent = displayTractateName(tractate);
     tractateSelect.appendChild(option);
   }
+  fitSelectWidthToOptions(tractateSelect);
 }
 
 function populateDafOptions(tractate, selected = "2a") {
@@ -1207,6 +1246,7 @@ function populateDafOptions(tractate, selected = "2a") {
   }
   const exists = [...dafSelect.options].some((o) => o.value === selected);
   dafSelect.value = exists ? selected : "2a";
+  fitSelectWidthToOptions(dafSelect);
 }
 
 function extractLinkRefs(linkItem) {
@@ -2135,6 +2175,35 @@ dafSelect.addEventListener("change", () => {
   });
 });
 
+if (dafYomiBtn instanceof HTMLButtonElement) {
+  dafYomiBtn.addEventListener("click", () => {
+    const originalText = dafYomiBtn.textContent;
+    dafYomiBtn.disabled = true;
+    dafYomiBtn.textContent = "טוען...";
+    setStatus("טוען דף יומי...");
+
+    void fetchJson("/api/daf-yomi")
+      .then((payload) => {
+        const ref = normalizeRef(payload?.ref || "");
+        const parts = parseRefParts(ref);
+        if (!parts || !(parts.tractate in TRACTATE_MAX_DAF)) {
+          throw new Error("לא התקבל דף יומי תקין מספריא");
+        }
+
+        tractateSelect.value = parts.tractate;
+        populateDafOptions(parts.tractate, parts.daf);
+        return loadRef(`${parts.tractate}.${parts.daf}`);
+      })
+      .catch((error) => {
+        setStatus(`טעינת דף יומי נכשלה: ${error.message}`);
+      })
+      .finally(() => {
+        dafYomiBtn.disabled = false;
+        dafYomiBtn.textContent = originalText;
+      });
+  });
+}
+
 segmentsEl.addEventListener("mouseover", (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
@@ -2276,6 +2345,7 @@ window.addEventListener("resize", () => {
   pendingLayoutResizeRaf = window.requestAnimationFrame(() => {
     pendingLayoutResizeRaf = 0;
     applyLayout(currentLayout);
+    fitHeaderSelectWidths();
   });
 });
 

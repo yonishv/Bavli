@@ -86,6 +86,179 @@ async function fetchSefariaJson(url) {
   return body;
 }
 
+function extractDafYomiRefFromCalendars(payload) {
+  const items = Array.isArray(payload)
+    ? payload
+    : payload?.calendar_items || payload?.items || payload?.calendar || [];
+  const itemList = Array.isArray(items) ? items : [];
+
+  const asText = (value) => String(value || "").trim();
+  const normalizeText = (value) => asText(value).toLowerCase();
+  const isKnownTractate = (name) => Boolean(TRACTATE_HEB[String(name || "")]);
+
+  const parseEnglishRef = (value) => {
+    const text = asText(value);
+    if (!text) return "";
+    // "Berakhot 2a" => "Berakhot.2a", "Bava Metzia 12" => "Bava_Metzia.12a"
+    const m = text.match(/^([A-Za-z][A-Za-z' -]+)\s+(\d+)([ab])?$/i);
+    if (!m) return "";
+    const tractate = m[1].replace(/'/g, "").trim().replace(/\s+/g, "_");
+    const dafNum = String(m[2] || "");
+    const amud = String(m[3] || "a").toLowerCase();
+    return `${tractate}.${dafNum}${amud}`;
+  };
+
+  const normalizeRefCandidate = (value) => {
+    const text = asText(value);
+    if (!text) return "";
+    const m = text.match(/^([A-Za-z_]+)\.(\d+)([ab])?$/i);
+    if (!m) return "";
+    const tractate = m[1];
+    if (!isKnownTractate(tractate)) return "";
+    const dafNum = String(m[2] || "");
+    const amud = String(m[3] || "a").toLowerCase();
+    return `${tractate}.${dafNum}${amud}`;
+  };
+
+  const normalizeMaybeRef = (value) => {
+    const text = asText(value);
+    if (!text) return "";
+    // Already a normalized ref-like value.
+    {
+      const ready = normalizeRefCandidate(text);
+      if (ready) return ready;
+    }
+
+    // URL with ref in path or query.
+    try {
+      const u = new URL(text, "https://www.sefaria.org");
+      const pathMatch = decodeURIComponent(u.pathname).match(/\/([A-Za-z_]+\.\d+[ab]?)(?:[/?#]|$)/i);
+      if (pathMatch) {
+        const parsed = normalizeRefCandidate(pathMatch[1]);
+        if (parsed) return parsed;
+      }
+      const qRef = asText(u.searchParams.get("p") || u.searchParams.get("ref"));
+      {
+        const parsed = normalizeRefCandidate(qRef);
+        if (parsed) return parsed;
+      }
+    } catch {
+      // Not a URL, continue below.
+    }
+
+    // Sometimes URL-like text is just "Berakhot.2a"
+    {
+      const parsed = normalizeRefCandidate(text.replace(/^\/+/, ""));
+      if (parsed) return parsed;
+    }
+
+    // English display value.
+    return normalizeRefCandidate(parseEnglishRef(text));
+  };
+
+  const isDafYomiItem = (item) => {
+    const en = [
+      item?.title?.en,
+      item?.title?.english,
+      item?.title_en,
+      item?.title,
+      item?.name?.en,
+      item?.name,
+      item?.category,
+      item?.key,
+      item?.description?.en,
+    ]
+      .map((v) => asText(v).toLowerCase())
+      .join(" | ");
+    const he = [item?.title?.he, item?.title_he, item?.name?.he, item?.description?.he]
+      .map((v) => asText(v).toLowerCase())
+      .join(" | ");
+    return (
+      en.includes("daf yomi") ||
+      en.includes("daily talmud") ||
+      he.includes("דף יומי") ||
+      he.includes("הדף היומי")
+    );
+  };
+
+  const extractRef = (item) => {
+    const candidates = [
+      item?.ref,
+      item?.heRef,
+      item?.sefaria_ref,
+      item?.url,
+      item?.displayValue?.en,
+      item?.displayValue,
+      item?.value?.en,
+      item?.value,
+    ];
+    for (const candidate of candidates) {
+      const ref = normalizeMaybeRef(candidate);
+      if (ref) return ref;
+    }
+    return "";
+  };
+
+  // Primary path: explicit Daf Yomi item.
+  for (const item of itemList) {
+    if (!isDafYomiItem(item)) continue;
+    const ref = extractRef(item);
+    if (ref) return ref;
+  }
+
+  // Fallback path: score all items and choose strongest likely Daf-Yomi candidate.
+  const scoreItem = (item, ref) => {
+    const blob = [
+      item?.title?.en,
+      item?.title?.he,
+      item?.title,
+      item?.name?.en,
+      item?.name?.he,
+      item?.name,
+      item?.category,
+      item?.description?.en,
+      item?.description?.he,
+      item?.displayValue?.en,
+      item?.displayValue?.he,
+      item?.displayValue,
+      item?.value?.en,
+      item?.value?.he,
+      item?.value,
+    ]
+      .map(normalizeText)
+      .join(" | ");
+
+    let score = 0;
+    if (blob.includes("daf yomi") || blob.includes("daily talmud")) score += 6;
+    if (blob.includes("דף יומי") || blob.includes("הדף היומי")) score += 6;
+    if (blob.includes("talmud") || blob.includes("תלמוד") || blob.includes("בבלי")) score += 2;
+    if (ref) score += 3;
+    return score;
+  };
+
+  let bestRef = "";
+  let bestScore = -1;
+  for (const item of itemList) {
+    const ref = extractRef(item);
+    if (!ref) continue;
+    const score = scoreItem(item, ref);
+    if (score > bestScore) {
+      bestScore = score;
+      bestRef = ref;
+    }
+  }
+  if (bestRef) return bestRef;
+
+  // Last-resort path: scan raw payload for any tractate.daf pattern and pick first valid.
+  const raw = typeof payload === "string" ? payload : JSON.stringify(payload || {});
+  const matches = raw.match(/[A-Za-z_]+\.\d+[ab]?/g) || [];
+  for (const candidate of matches) {
+    const ref = normalizeRefCandidate(candidate);
+    if (ref) return ref;
+  }
+  return "";
+}
+
 async function fetchGenizah(pathname, { method = "GET" } = {}) {
   const url = `${GENIZAH_BASE}${pathname}`;
   const headers = {
@@ -391,6 +564,19 @@ app.get("/api/related/:ref", async (req, res) => {
     res.json(payload);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch related", details: error.message });
+  }
+});
+
+app.get("/api/daf-yomi", async (_req, res) => {
+  try {
+    const payload = await fetchSefariaJson(`${SEFARIA_BASE}/api/calendars`);
+    const ref = normalizeRef(extractDafYomiRefFromCalendars(payload));
+    if (!ref) {
+      return res.status(404).json({ error: "לא נמצא דף יומי בנתוני לוח ספריא" });
+    }
+    return res.json({ ref });
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to fetch Daf Yomi", details: error.message });
   }
 });
 

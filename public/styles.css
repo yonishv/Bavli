@@ -352,6 +352,13 @@ input {
   color: #232734;
 }
 
+#tractateSelect,
+#dafSelect {
+  min-width: 0;
+  width: auto;
+  flex: 0 0 auto;
+}
+
 button {
   border: 1px solid transparent;
   background: linear-gradient(120deg, var(--brand) 0%, #b05c3c 100%);
