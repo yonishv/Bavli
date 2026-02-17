@@ -74,6 +74,8 @@ let showNikud = true;
 let genizahLightboxEl = null;
 let genizahLightboxImgEl = null;
 let genizahLightboxZoom = 1;
+let genizahLightboxPanX = 0;
+let genizahLightboxPanY = 0;
 let lastGenizahSegmentIndex = null;
 const GENIZAH_LIGHTBOX_ZOOM_MIN = 1;
 const GENIZAH_LIGHTBOX_ZOOM_MAX = 4;
@@ -1728,11 +1730,12 @@ function ensureGenizahLightbox() {
     !(zoomResetBtn instanceof HTMLButtonElement)
   ) return;
 
-  function applyLightboxZoom() {
+  function applyLightboxTransform() {
     const bounded = Math.max(GENIZAH_LIGHTBOX_ZOOM_MIN, Math.min(GENIZAH_LIGHTBOX_ZOOM_MAX, genizahLightboxZoom));
     genizahLightboxZoom = bounded;
-    imageEl.style.transform = `scale(${bounded})`;
+    imageEl.style.transform = `translate(${genizahLightboxPanX}px, ${genizahLightboxPanY}px) scale(${bounded})`;
     imageEl.style.transformOrigin = "center center";
+    imageEl.style.cursor = bounded > 1 ? "grab" : "zoom-in";
     zoomResetBtn.textContent = `${Math.round(bounded * 100)}%`;
   }
 
@@ -1740,21 +1743,57 @@ function ensureGenizahLightbox() {
     overlay.hidden = true;
     imageEl.removeAttribute("src");
     genizahLightboxZoom = 1;
-    applyLightboxZoom();
+    genizahLightboxPanX = 0;
+    genizahLightboxPanY = 0;
+    applyLightboxTransform();
     document.body.classList.remove("lightbox-open");
   }
 
   function adjustZoom(delta) {
     genizahLightboxZoom += delta;
-    applyLightboxZoom();
+    applyLightboxTransform();
   }
+
+  let isDragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let dragStartPanX = 0;
+  let dragStartPanY = 0;
+
+  imageEl.addEventListener("mousedown", (ev) => {
+    if (genizahLightboxZoom <= 1) return;
+    ev.preventDefault();
+    isDragging = true;
+    dragStartX = ev.clientX;
+    dragStartY = ev.clientY;
+    dragStartPanX = genizahLightboxPanX;
+    dragStartPanY = genizahLightboxPanY;
+    imageEl.classList.add("is-dragging");
+    imageEl.style.cursor = "grabbing";
+  });
+
+  window.addEventListener("mousemove", (ev) => {
+    if (!isDragging) return;
+    genizahLightboxPanX = dragStartPanX + (ev.clientX - dragStartX);
+    genizahLightboxPanY = dragStartPanY + (ev.clientY - dragStartY);
+    applyLightboxTransform();
+  });
+
+  window.addEventListener("mouseup", () => {
+    if (!isDragging) return;
+    isDragging = false;
+    imageEl.classList.remove("is-dragging");
+    applyLightboxTransform();
+  });
 
   closeBtn.addEventListener("click", closeLightbox);
   zoomInBtn.addEventListener("click", () => adjustZoom(GENIZAH_LIGHTBOX_ZOOM_STEP));
   zoomOutBtn.addEventListener("click", () => adjustZoom(-GENIZAH_LIGHTBOX_ZOOM_STEP));
   zoomResetBtn.addEventListener("click", () => {
     genizahLightboxZoom = 1;
-    applyLightboxZoom();
+    genizahLightboxPanX = 0;
+    genizahLightboxPanY = 0;
+    applyLightboxTransform();
   });
   imageEl.addEventListener(
     "wheel",
@@ -1782,8 +1821,11 @@ function openGenizahLightbox(src) {
   const value = String(src || "").trim();
   if (!value) return;
   genizahLightboxZoom = 1;
-  genizahLightboxImgEl.style.transform = "scale(1)";
+  genizahLightboxPanX = 0;
+  genizahLightboxPanY = 0;
+  genizahLightboxImgEl.style.transform = "translate(0px, 0px) scale(1)";
   genizahLightboxImgEl.style.transformOrigin = "center center";
+  genizahLightboxImgEl.style.cursor = "zoom-in";
   genizahLightboxImgEl.src = value;
   genizahLightboxEl.hidden = false;
   document.body.classList.add("lightbox-open");

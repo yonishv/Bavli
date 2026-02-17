@@ -703,6 +703,12 @@ body.lightbox-open {
   height: auto;
   transition: transform 120ms ease-out;
   cursor: zoom-in;
+  user-select: none;
+}
+
+.genizah-lightbox-image.is-dragging {
+  transition: none;
+  cursor: grabbing;
 }
 
 .genizah-lightbox-close {
