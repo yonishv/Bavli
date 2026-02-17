@@ -113,6 +113,21 @@ async function fetchGenizah(pathname, { method = "GET" } = {}) {
   return body;
 }
 
+async function fetchGenizahRaw(pathname, { method = "GET", extraHeaders = {} } = {}) {
+  const url = `${GENIZAH_BASE}${pathname}`;
+  const headers = {
+    Accept: "*/*",
+    "X-Requested-With": "XMLHttpRequest",
+    Referer: "https://bavli.genizah.org/?lan=heb&isPartial=False&isDoubleLogin=False",
+    ...extraHeaders,
+  };
+
+  const activeCookie = genizahSessionCookie || process.env.GENIZAH_COOKIE || "";
+  if (activeCookie) headers.Cookie = activeCookie;
+
+  return fetch(url, { method, headers });
+}
+
 function extractSetCookies(headers) {
   if (typeof headers?.getSetCookie === "function") return headers.getSetCookie();
   const raw = headers?.get?.("set-cookie");
@@ -318,6 +333,23 @@ function findDivisionByDesc(divisions, expectedDesc) {
   return divisions.find((d) => String(d?.Desc || "").trim() === target);
 }
 
+function extractGuid(value) {
+  const text = typeof value === "string" ? value : JSON.stringify(value || "");
+  const m = text.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  return m ? m[0] : "";
+}
+
+function normalizeQuickViewUrl(filePath, fileName) {
+  const p = String(filePath || "").replace(/\\\\/g, "/").replace(/\\+/g, "/");
+  const n = String(fileName || "").trim();
+  if (!p || !n) return "";
+  if (/^https?:\/\//i.test(p)) {
+    const base = p.endsWith("/") ? p : `${p}/`;
+    return `${base}${encodeURIComponent(n)}_%23Q.jpg`;
+  }
+  return "";
+}
+
 app.get("/api/text/:ref", async (req, res) => {
   try {
     const ref = normalizeRef(req.params.ref);
@@ -461,6 +493,74 @@ app.get("/api/genizah/blocks/by-ref", async (req, res) => {
       error: "Failed to resolve and fetch Genizah blocks by ref",
       details: error.message,
     });
+  }
+});
+
+app.get("/api/genizah/image/by-logical-unit", async (req, res) => {
+  try {
+    const logicalUnitId = Number(req.query.logicalUnitId);
+    const codexId = Number(req.query.codexId);
+    if (!Number.isFinite(logicalUnitId) || logicalUnitId <= 0) {
+      return res.status(400).json({ error: "logicalUnitId is required." });
+    }
+
+    const filesPayload = await fetchGenizah(
+      `/api/DiffAPI/GetFilesByLogicalUnitId?idsJsonStr=${encodeURIComponent(`[${logicalUnitId}]`)}`
+    );
+    const files = Array.isArray(filesPayload?.FilesData)
+      ? filesPayload.FilesData
+      : Array.isArray(filesPayload?.data?.FilesData)
+        ? filesPayload.data.FilesData
+        : [];
+    if (!files.length) return res.status(404).json({ error: "No image files found for this logical unit." });
+
+    let selected = null;
+    if (Number.isFinite(codexId) && codexId > 0) {
+      selected = files.find((f) => Number(f?.CodexId) === codexId) || null;
+    }
+    if (!selected) selected = files[0];
+
+    const imageFileDetailsId = selected?.ImageFileDetailsId;
+    const quickViewUrl = normalizeQuickViewUrl(selected?.FilePath, selected?.FileName);
+
+    if (imageFileDetailsId) {
+      const guidPayload = await fetchGenizah(`/api/FileByIDAPI/GetGuidByFile?ImageFileDetailsId=${encodeURIComponent(String(imageFileDetailsId))}`);
+      const guidNumber = extractGuid(guidPayload);
+      if (guidNumber) {
+        const imgResponse = await fetchGenizahRaw(
+          `/api/FileByIDAPI/GetFilePathByGuid?guidNumber=${encodeURIComponent(guidNumber)}&TypeOfImage=RegularImage&delayFinalProc=true`
+        );
+        if (imgResponse.ok) {
+          const contentType = imgResponse.headers.get("content-type") || "image/png";
+          const bytes = Buffer.from(await imgResponse.arrayBuffer());
+          res.setHeader("Content-Type", contentType);
+          res.setHeader("Cache-Control", "private, max-age=300");
+          return res.status(200).send(bytes);
+        }
+      }
+    }
+
+    if (quickViewUrl) {
+      const quickResponse = await fetch(quickViewUrl, {
+        headers: {
+          Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+          Referer: "https://bavli.genizah.org/ResultPages/Difference",
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        },
+      });
+      if (quickResponse.ok) {
+        const contentType = quickResponse.headers.get("content-type") || "image/jpeg";
+        const bytes = Buffer.from(await quickResponse.arrayBuffer());
+        res.setHeader("Content-Type", contentType);
+        res.setHeader("Cache-Control", "public, max-age=300");
+        return res.status(200).send(bytes);
+      }
+    }
+
+    return res.status(404).json({ error: "Could not resolve manuscript image for this logical unit." });
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to fetch Genizah manuscript image", details: error.message });
   }
 });
 

@@ -614,10 +614,111 @@ button.chip:disabled {
 }
 
 .ref-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin: 0 0 6px;
   color: var(--brand-2);
   font-weight: 700;
   font-size: 0.92rem;
+}
+
+.genizah-image-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid #d7c8ae;
+  background: #fff;
+  text-decoration: none;
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.genizah-image-link:hover {
+  border-color: #9fb6c4;
+  background: #f4f9fc;
+}
+
+body.lightbox-open {
+  overflow: hidden;
+}
+
+.genizah-lightbox[hidden] {
+  display: none !important;
+}
+
+.genizah-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 2200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 23, 30, 0.78);
+  padding: 18px;
+}
+
+.genizah-lightbox-toolbar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 2;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.genizah-lightbox-toolbar button {
+  min-width: 40px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(10, 12, 18, 0.75);
+  color: #fff;
+  font-size: 0.98rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 12px;
+}
+
+.genizah-lightbox-content {
+  position: relative;
+  max-width: min(1200px, 94vw);
+  max-height: min(90vh, 980px);
+  border-radius: 12px;
+  overflow: auto;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: #0f1118;
+}
+
+.genizah-lightbox-image {
+  display: block;
+  max-width: min(1200px, 94vw);
+  max-height: min(90vh, 980px);
+  width: auto;
+  height: auto;
+  transition: transform 120ms ease-out;
+  cursor: zoom-in;
+}
+
+.genizah-lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 1;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(10, 12, 18, 0.75);
+  color: #fff;
+  font-size: 1.45rem;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .ref-text,

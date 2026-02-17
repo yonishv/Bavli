@@ -71,6 +71,13 @@ const DEFAULT_LAYOUT = {
 };
 let currentLayout = cloneLayout(DEFAULT_LAYOUT);
 let showNikud = true;
+let genizahLightboxEl = null;
+let genizahLightboxImgEl = null;
+let genizahLightboxZoom = 1;
+let lastGenizahSegmentIndex = null;
+const GENIZAH_LIGHTBOX_ZOOM_MIN = 1;
+const GENIZAH_LIGHTBOX_ZOOM_MAX = 4;
+const GENIZAH_LIGHTBOX_ZOOM_STEP = 0.2;
 const SAGE_INFO = [
   { name: "רבן יוחנן בן זכאי", aliases: ["רבן יוחנן בן זכאי"], generation: "דור א׳ לתנאים", yeshiva: "יבנה" },
   { name: "רבן גמליאל", aliases: ["רבן גמליאל", "רבן גמליאל דיבנה"], generation: "דור ב׳ לתנאים", yeshiva: "יבנה" },
@@ -1381,6 +1388,9 @@ function buildGenizahGroups(payload) {
     {
       codexName: c.CodexName || c.CodexFullName || `כתב יד ${c.CodexId}`,
       orderNo: Number.isFinite(Number(c.orderNo)) ? Number(c.orderNo) : Number.MAX_SAFE_INTEGER,
+      firstImgPath: c.FirstImgPath || "",
+      firstQuickViewImgPath: c.FirstQuickViewImgPath || "",
+      firstTransPath: c.FirstTransPath || "",
     },
   ]));
   const VILNA_CODEX_ID = 30000;
@@ -1422,6 +1432,13 @@ function buildGenizahGroups(payload) {
       codexName: codexMeta.codexName,
       orderNo: codexMeta.orderNo,
       text,
+      logicalUnitId: row?.LogicalUnitId || null,
+      logicalUnitGroupId: row?.LogicalUnitGroupID || null,
+      firstInvWordId: row?.FirstInvWordID || null,
+      firstOb: row?.FirstOB || null,
+      firstImgPath: row?.FirstImgPath || codexMeta.firstImgPath || "",
+      firstQuickViewImgPath: row?.FirstQuickViewImgPath || codexMeta.firstQuickViewImgPath || "",
+      firstTransPath: row?.FirstTransPath || codexMeta.firstTransPath || "",
     };
     if (!current || candidate.text.length > current.text.length) {
       g.variantsByCodex.set(row?.CodexId, candidate);
@@ -1450,6 +1467,58 @@ function buildGenizahGroups(payload) {
     .sort((a, b) => (a.mappingOrder - b.mappingOrder));
 
   return groups;
+}
+
+function absoluteGenizahUrl(urlLike) {
+  const value = String(urlLike || "").trim();
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) return value;
+  if (value.startsWith("//")) return `https:${value}`;
+  if (value.startsWith("/")) return `https://bavli.genizah.org${value}`;
+  return "";
+}
+
+function buildDirectGenizahImageLink(variant) {
+  const directCandidates = [
+    variant?.firstQuickViewImgPath,
+    variant?.firstImgPath,
+    variant?.firstTransPath,
+  ];
+  for (const c of directCandidates) {
+    const abs = absoluteGenizahUrl(c);
+    if (abs) return abs;
+  }
+  return "";
+}
+
+function buildProxyGenizahImageLink(variant) {
+  if (variant?.logicalUnitId) {
+    const lu = encodeURIComponent(String(variant.logicalUnitId));
+    const c = variant?.codexId ? `&codexId=${encodeURIComponent(String(variant.codexId))}` : "";
+    return `/api/genizah/image/by-logical-unit?logicalUnitId=${lu}${c}`;
+  }
+  return "";
+}
+
+function buildGenizahImageLink(variant) {
+  if (variant?.logicalUnitId) {
+    const lu = encodeURIComponent(String(variant.logicalUnitId));
+    const c = variant?.codexId ? `&codexId=${encodeURIComponent(String(variant.codexId))}` : "";
+    return `/api/genizah/image/by-logical-unit?logicalUnitId=${lu}${c}`;
+  }
+
+  const directCandidates = [
+    variant?.firstQuickViewImgPath,
+    variant?.firstImgPath,
+    variant?.firstTransPath,
+  ];
+  for (const c of directCandidates) {
+    const abs = absoluteGenizahUrl(c);
+    if (abs) return abs;
+  }
+
+  // Fallback: keep a direct path into the Genizah app when deep image URL is not exposed.
+  return "https://bavli.genizah.org/ResultPages/Difference";
 }
 
 function pickGenizahGroupForSegment(segmentIndex) {
@@ -1584,6 +1653,7 @@ function renderWitnessDiffHtml(baseText, witnessText, isBase) {
 }
 
 function renderGenizahForSegment(segmentIndex) {
+  lastGenizahSegmentIndex = segmentIndex || null;
   if (!segmentIndex) {
     genizahListEl.textContent = "רחף מעל משפט בגמרא כדי לראות חילופי נוסח.";
     return;
@@ -1614,13 +1684,109 @@ function renderGenizahForSegment(segmentIndex) {
     card.className = `ref-card genizah-witness${v === baseVariant ? " is-base" : ""}`;
     const alignedWitnessText = alignWitnessTextToSegment(v.text, segTokens);
     const diffHtml = renderWitnessDiffHtml(alignedBaseText, alignedWitnessText, v === baseVariant);
+    const imageHref = buildGenizahImageLink(v);
     card.innerHTML = `
-      <p class="ref-title">${safeHtml(v.codexName)}</p>
+      <p class="ref-title">
+        <span>${safeHtml(v.codexName)}</span>
+        <a class="genizah-image-link" href="${safeHtml(imageHref)}" data-lightbox-src="${safeHtml(imageHref)}" title="פתח תמונת כתב יד">🖼</a>
+      </p>
       <p class="ref-text">${diffHtml}</p>
     `;
     wrap.appendChild(card);
   }
   genizahListEl.appendChild(wrap);
+}
+
+function ensureGenizahLightbox() {
+  if (genizahLightboxEl && genizahLightboxImgEl) return;
+
+  const overlay = document.createElement("div");
+  overlay.className = "genizah-lightbox";
+  overlay.hidden = true;
+  overlay.innerHTML = `
+    <div class="genizah-lightbox-toolbar">
+      <button type="button" class="genizah-lightbox-zoomout" aria-label="הקטנה">−</button>
+      <button type="button" class="genizah-lightbox-zoomin" aria-label="הגדלה">+</button>
+      <button type="button" class="genizah-lightbox-reset" aria-label="איפוס זום">100%</button>
+    </div>
+    <button type="button" class="genizah-lightbox-close" aria-label="סגירה">×</button>
+    <div class="genizah-lightbox-content">
+      <img class="genizah-lightbox-image" alt="תמונת כתב יד" />
+    </div>
+  `;
+
+  const closeBtn = overlay.querySelector(".genizah-lightbox-close");
+  const imageEl = overlay.querySelector(".genizah-lightbox-image");
+  const zoomOutBtn = overlay.querySelector(".genizah-lightbox-zoomout");
+  const zoomInBtn = overlay.querySelector(".genizah-lightbox-zoomin");
+  const zoomResetBtn = overlay.querySelector(".genizah-lightbox-reset");
+  if (
+    !(closeBtn instanceof HTMLButtonElement) ||
+    !(imageEl instanceof HTMLImageElement) ||
+    !(zoomOutBtn instanceof HTMLButtonElement) ||
+    !(zoomInBtn instanceof HTMLButtonElement) ||
+    !(zoomResetBtn instanceof HTMLButtonElement)
+  ) return;
+
+  function applyLightboxZoom() {
+    const bounded = Math.max(GENIZAH_LIGHTBOX_ZOOM_MIN, Math.min(GENIZAH_LIGHTBOX_ZOOM_MAX, genizahLightboxZoom));
+    genizahLightboxZoom = bounded;
+    imageEl.style.transform = `scale(${bounded})`;
+    imageEl.style.transformOrigin = "center center";
+    zoomResetBtn.textContent = `${Math.round(bounded * 100)}%`;
+  }
+
+  function closeLightbox() {
+    overlay.hidden = true;
+    imageEl.removeAttribute("src");
+    genizahLightboxZoom = 1;
+    applyLightboxZoom();
+    document.body.classList.remove("lightbox-open");
+  }
+
+  function adjustZoom(delta) {
+    genizahLightboxZoom += delta;
+    applyLightboxZoom();
+  }
+
+  closeBtn.addEventListener("click", closeLightbox);
+  zoomInBtn.addEventListener("click", () => adjustZoom(GENIZAH_LIGHTBOX_ZOOM_STEP));
+  zoomOutBtn.addEventListener("click", () => adjustZoom(-GENIZAH_LIGHTBOX_ZOOM_STEP));
+  zoomResetBtn.addEventListener("click", () => {
+    genizahLightboxZoom = 1;
+    applyLightboxZoom();
+  });
+  imageEl.addEventListener(
+    "wheel",
+    (ev) => {
+      ev.preventDefault();
+      adjustZoom(ev.deltaY < 0 ? GENIZAH_LIGHTBOX_ZOOM_STEP : -GENIZAH_LIGHTBOX_ZOOM_STEP);
+    },
+    { passive: false }
+  );
+  overlay.addEventListener("click", (ev) => {
+    if (ev.target === overlay) closeLightbox();
+  });
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && !overlay.hidden) closeLightbox();
+  });
+
+  document.body.appendChild(overlay);
+  genizahLightboxEl = overlay;
+  genizahLightboxImgEl = imageEl;
+}
+
+function openGenizahLightbox(src) {
+  ensureGenizahLightbox();
+  if (!(genizahLightboxEl instanceof HTMLElement) || !(genizahLightboxImgEl instanceof HTMLImageElement)) return;
+  const value = String(src || "").trim();
+  if (!value) return;
+  genizahLightboxZoom = 1;
+  genizahLightboxImgEl.style.transform = "scale(1)";
+  genizahLightboxImgEl.style.transformOrigin = "center center";
+  genizahLightboxImgEl.src = value;
+  genizahLightboxEl.hidden = false;
+  document.body.classList.add("lightbox-open");
 }
 
 async function loadGenizahForRef(ref) {
@@ -1981,6 +2147,17 @@ segmentsEl.addEventListener("mouseout", (event) => {
   if (target.closest(".sage-mention")) {
     hideSageTooltip();
   }
+});
+
+genizahListEl.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const link = target.closest(".genizah-image-link");
+  if (!(link instanceof HTMLAnchorElement)) return;
+  const src = link.dataset.lightboxSrc || link.getAttribute("href") || "";
+  if (!src) return;
+  event.preventDefault();
+  openGenizahLightbox(src);
 });
 
 genizahLoginForm.addEventListener("submit", (event) => {
