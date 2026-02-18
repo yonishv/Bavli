@@ -783,11 +783,32 @@ function syncSettingsModalFromState() {
 }
 
 function applySettingsFromModal() {
+  const prevVisibility = {
+    showCommentary: Boolean(displaySettings.showCommentary),
+    showHalakha: Boolean(displaySettings.showHalakha),
+    showTanakh: Boolean(displaySettings.showTanakh),
+    showGenizah: Boolean(displaySettings.showGenizah),
+  };
+
   for (const [key, input] of Object.entries(settingsInputs)) {
     if (input instanceof HTMLInputElement) {
       displaySettings[key] = Boolean(input.checked);
     }
   }
+
+  const restoredHiddenPanel =
+    (!prevVisibility.showCommentary && displaySettings.showCommentary) ||
+    (!prevVisibility.showHalakha && displaySettings.showHalakha) ||
+    (!prevVisibility.showTanakh && displaySettings.showTanakh) ||
+    (!prevVisibility.showGenizah && displaySettings.showGenizah);
+
+  // When restoring a previously hidden panel, reset to base layout first
+  // so panels won't overlap after coming back.
+  if (restoredHiddenPanel) {
+    currentLayout = cloneLayout(DEFAULT_LAYOUT);
+    saveLayout(currentLayout);
+  }
+
   saveDisplaySettings();
   applyDisplaySettingsToUi();
   applyLayout(currentLayout);
