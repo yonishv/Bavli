@@ -20,7 +20,7 @@
           <button id="layoutEditToggleBtn" type="button" class="layout-edit-toggle-btn">שינוי פריסה</button>
           <button id="layoutSaveBtn" type="button" class="layout-save-btn" hidden>שמירת פריסה</button>
           <button id="layoutResetBtn" type="button" class="layout-reset-btn">איפוס פריסה</button>
-          <button id="nikudToggleBtn" type="button" class="nikud-toggle-btn is-on" aria-pressed="true">ניקוד</button>
+          <button id="settingsBtn" type="button" class="settings-btn">הגדרות</button>
           <span class="controls-credit">פותח על ידי יוני שויקה באמצעות קודקס ג׳יפיטי. לתגובות והערות: <a href="mailto:shveka@gmail.com">shveka@gmail.com</a> | באתר זה נעשה שימוש בטקסטים וב-API של <a href="https://www.sefaria.org.il/texts" target="_blank" rel="noreferrer"><strong>ספריא</strong></a> ותודתי נתונה להם.</span>
         </form>
         <form id="genizahLoginForm" class="controls genizah-auth-form" autocomplete="off">
@@ -67,6 +67,28 @@
         <div id="genizahList" class="scroll-region">טוען חילופי נוסח...</div>
       </section>
     </main>
+
+    <div id="settingsModal" class="settings-modal" hidden>
+      <div class="settings-modal-backdrop" data-settings-close="1"></div>
+      <section class="settings-modal-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="settings-modal-header">
+          <h3 id="settingsTitle">הגדרות תצוגה</h3>
+          <button id="settingsCloseBtn" type="button" class="settings-close-btn" aria-label="סגור">×</button>
+        </div>
+        <div class="settings-options">
+          <label><input id="settingNikudGemara" type="checkbox" checked /> הצג ניקוד לגמרא</label>
+          <label><input id="settingNikudTanakh" type="checkbox" checked /> הצג ניקוד לתורה אור</label>
+          <label><input id="settingRashiFont" type="checkbox" checked /> הצג רש״י ותוספות בכתב רש״י</label>
+          <label><input id="settingShowCommentary" type="checkbox" checked /> הצג חלון מפרשים</label>
+          <label><input id="settingShowHalakha" type="checkbox" checked /> הצג חלון עין משפט</label>
+          <label><input id="settingShowTanakh" type="checkbox" checked /> הצג חלון תורה אור</label>
+          <label><input id="settingShowGenizah" type="checkbox" checked /> הצג חלון הכי גרסינן</label>
+        </div>
+        <div class="settings-actions">
+          <button id="settingsApplyBtn" type="button" class="settings-apply-btn">סגירה ועדכון</button>
+        </div>
+      </section>
+    </div>
 
     <script type="module" src="/main.js"></script>
   </body>

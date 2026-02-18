@@ -23,7 +23,23 @@ const controlsPanelEl = layoutGridEl?.querySelector('[data-widget-id="controls"]
 const layoutEditToggleBtn = document.getElementById("layoutEditToggleBtn");
 const layoutSaveBtn = document.getElementById("layoutSaveBtn");
 const layoutResetBtn = document.getElementById("layoutResetBtn");
-const nikudToggleBtn = document.getElementById("nikudToggleBtn");
+const settingsBtn = document.getElementById("settingsBtn");
+const settingsModalEl = document.getElementById("settingsModal");
+const settingsCloseBtn = document.getElementById("settingsCloseBtn");
+const settingsApplyBtn = document.getElementById("settingsApplyBtn");
+const commentaryPanelEl = layoutGridEl?.querySelector('[data-widget-id="commentary"]');
+const halakhaPanelEl = layoutGridEl?.querySelector('[data-widget-id="halakha"]');
+const tanakhPanelEl = layoutGridEl?.querySelector('[data-widget-id="tanakh"]');
+const genizahPanelEl = layoutGridEl?.querySelector('[data-widget-id="genizah"]');
+const settingsInputs = {
+  nikudGemara: document.getElementById("settingNikudGemara"),
+  nikudTanakh: document.getElementById("settingNikudTanakh"),
+  rashiFont: document.getElementById("settingRashiFont"),
+  showCommentary: document.getElementById("settingShowCommentary"),
+  showHalakha: document.getElementById("settingShowHalakha"),
+  showTanakh: document.getElementById("settingShowTanakh"),
+  showGenizah: document.getElementById("settingShowGenizah"),
+};
 const sageTooltipEl = document.createElement("div");
 sageTooltipEl.className = "sage-tooltip-floating";
 document.body.appendChild(sageTooltipEl);
@@ -46,7 +62,7 @@ let genizahConnected = false;
 let layoutEditMode = false;
 const refTextCache = new Map();
 const LAYOUT_STORAGE_KEY = "bavli.layout.v1";
-const NIKUD_STORAGE_KEY = "bavli.nikud.v1";
+const DISPLAY_SETTINGS_STORAGE_KEY = "bavli.display.settings.v1";
 const GRID_COLS = 12;
 const GRID_ROWS = 12;
 const WIDGET_IDS = ["controls", "commentary", "text", "halakha", "tanakh", "genizah"];
@@ -71,7 +87,16 @@ const DEFAULT_LAYOUT = {
   genizah: { col: 1, row: 10, colSpan: 9, rowSpan: 3 },
 };
 let currentLayout = cloneLayout(DEFAULT_LAYOUT);
-let showNikud = true;
+const DEFAULT_DISPLAY_SETTINGS = {
+  nikudGemara: true,
+  nikudTanakh: true,
+  rashiFont: true,
+  showCommentary: true,
+  showHalakha: true,
+  showTanakh: true,
+  showGenizah: true,
+};
+let displaySettings = { ...DEFAULT_DISPLAY_SETTINGS };
 let genizahLightboxEl = null;
 let genizahLightboxImgEl = null;
 let genizahLightboxZoom = 1;
@@ -228,6 +253,91 @@ function cloneLayout(layout) {
   return out;
 }
 
+function getVisibleDataWidgetIds() {
+  const ids = [];
+  if (displaySettings.showCommentary) ids.push("commentary");
+  if (displaySettings.showHalakha) ids.push("halakha");
+  if (displaySettings.showTanakh) ids.push("tanakh");
+  if (displaySettings.showGenizah) ids.push("genizah");
+  // Gemara is always visible.
+  ids.push("text");
+  return ids;
+}
+
+function buildRuleBasedDataLayout(controlsRowSpan) {
+  const showCommentary = Boolean(displaySettings.showCommentary);
+  const showHalakha = Boolean(displaySettings.showHalakha);
+  const showTanakh = Boolean(displaySettings.showTanakh);
+  const showGenizah = Boolean(displaySettings.showGenizah);
+  const dataStartRow = Math.min(GRID_ROWS, controlsRowSpan + 1);
+  const dataRows = Math.max(1, GRID_ROWS - controlsRowSpan);
+
+  const allVisible = showCommentary && showHalakha && showTanakh && showGenizah;
+  if (allVisible) return null;
+
+  const layout = {
+    text: { ...DEFAULT_LAYOUT.text },
+    commentary: { ...DEFAULT_LAYOUT.commentary },
+    halakha: { ...DEFAULT_LAYOUT.halakha },
+    tanakh: { ...DEFAULT_LAYOUT.tanakh },
+    genizah: { ...DEFAULT_LAYOUT.genizah },
+  };
+
+  // Rule: hiding either Torah-Or or Ein-Mishpat => Genizah spreads across full width.
+  if (showGenizah && (!showTanakh || !showHalakha)) {
+    layout.genizah.col = 1;
+    layout.genizah.colSpan = 12;
+  }
+
+  // Rule: hiding both Torah-Or and Ein-Mishpat => Gemara also expands.
+  if (!showTanakh && !showHalakha) {
+    layout.text.col = 1;
+    layout.text.colSpan = showCommentary ? 9 : 12;
+  }
+
+  // Rule: hiding commentators => Gemara expands rightward.
+  if (!showCommentary) {
+    layout.text.col = 1;
+    layout.text.colSpan = (!showTanakh && !showHalakha) ? 12 : 9;
+  }
+
+  // Rule: hiding Genizah => Gemara and Commentary spread downward.
+  if (!showGenizah) {
+    layout.text.row = dataStartRow;
+    layout.text.rowSpan = dataRows;
+    if (showCommentary) {
+      layout.commentary.row = dataStartRow;
+      layout.commentary.rowSpan = dataRows;
+    }
+  }
+
+  return layout;
+}
+
+function stretchDataPanelsToBottom(layout, dataIds) {
+  const ids = Array.isArray(dataIds) ? dataIds : [];
+  if (!ids.length) return;
+  let maxBottom = 0;
+  for (const id of ids) {
+    const r = layout?.[id];
+    if (!r) continue;
+    const bottom = r.row + r.rowSpan - 1;
+    if (bottom > maxBottom) maxBottom = bottom;
+  }
+  if (!maxBottom) return;
+  const gap = GRID_ROWS - maxBottom;
+  if (gap <= 0) return;
+
+  for (const id of ids) {
+    const r = layout?.[id];
+    if (!r) continue;
+    const bottom = r.row + r.rowSpan - 1;
+    if (bottom === maxBottom) {
+      r.rowSpan += gap;
+    }
+  }
+}
+
 function isValidRect(r) {
   if (!r) return false;
   if (![r.col, r.row, r.colSpan, r.rowSpan].every((n) => Number.isFinite(n))) return false;
@@ -245,17 +355,17 @@ function overlap(a, b) {
   return a.col < bRight && aRight > b.col && a.row < bBottom && aBottom > b.row;
 }
 
-function validateLayout(layout) {
-  for (const id of WIDGET_IDS) {
+function validateLayout(layout, activeIds = WIDGET_IDS) {
+  for (const id of activeIds) {
     if (!isValidRect(layout[id])) {
       return { ok: false, error: `ערכים לא תקינים עבור "${WIDGET_LABELS_HE[id] || id}"` };
     }
   }
 
-  for (let i = 0; i < WIDGET_IDS.length; i += 1) {
-    for (let j = i + 1; j < WIDGET_IDS.length; j += 1) {
-      const a = WIDGET_IDS[i];
-      const b = WIDGET_IDS[j];
+  for (let i = 0; i < activeIds.length; i += 1) {
+    for (let j = i + 1; j < activeIds.length; j += 1) {
+      const a = activeIds[i];
+      const b = activeIds[j];
       if (overlap(layout[a], layout[b])) {
         return {
           ok: false,
@@ -271,6 +381,8 @@ function validateLayout(layout) {
 function applyLayout(layout) {
   const effective = cloneLayout(layout);
   const baseControlsRows = Math.max(1, Number(layout?.controls?.rowSpan) || 1);
+  const visibleDataIds = getVisibleDataWidgetIds();
+  const activeIds = ["controls", ...visibleDataIds];
 
   if (genizahConnected) {
     // Connected mode must always be a single top line.
@@ -291,7 +403,16 @@ function applyLayout(layout) {
     effective.controls.rowSpan = Math.max(2, baseControlsRows);
   }
 
-  const check = validateLayout(effective);
+  const ruleBasedDataLayout = buildRuleBasedDataLayout(effective.controls.rowSpan);
+  if (ruleBasedDataLayout) {
+    for (const [id, rect] of Object.entries(ruleBasedDataLayout)) {
+      effective[id] = rect;
+    }
+  }
+
+  stretchDataPanelsToBottom(effective, visibleDataIds);
+
+  const check = validateLayout(effective, activeIds);
   if (!check.ok) {
     return applyStaticLayout(layout);
   }
@@ -473,17 +594,18 @@ function initMouseLayoutEditing() {
 
       let candidate = cloneLayout(currentLayout);
       candidate[id] = next;
-      let check = validateLayout(candidate);
+      const activeIds = ["controls", ...getVisibleDataWidgetIds()];
+      let check = validateLayout(candidate, activeIds);
       if (!check.ok && mode === "resize") {
         // If diagonal resize is blocked, try each axis independently so vertical resize is not
         // dropped due to tiny horizontal movement (and vice versa).
         const yOnly = cloneLayout(currentLayout);
         yOnly[id] = clampRect({ ...start, rowSpan: start.rowSpan + dy });
-        const yCheck = validateLayout(yOnly);
+        const yCheck = validateLayout(yOnly, activeIds);
 
         const xOnly = cloneLayout(currentLayout);
         xOnly[id] = clampRect(applyLeftEdgeHorizontalResize(start, dx));
-        const xCheck = validateLayout(xOnly);
+        const xCheck = validateLayout(xOnly, activeIds);
 
         if (!yCheck.ok && !xCheck.ok) return;
         if (Math.abs(dy) >= Math.abs(dx)) {
@@ -491,7 +613,7 @@ function initMouseLayoutEditing() {
         } else {
           candidate = xCheck.ok ? xOnly : yOnly;
         }
-        check = validateLayout(candidate);
+        check = validateLayout(candidate, activeIds);
       }
       if (!check.ok) return;
 
@@ -612,8 +734,75 @@ function stripNikud(text) {
   return String(text || "").replace(/[\u0591-\u05AF\u05B0-\u05BC\u05C1-\u05C2\u05C4-\u05C5\u05C7]/g, "");
 }
 
-function displayHebrewText(text) {
-  return showNikud ? String(text || "") : stripNikud(text);
+function displayHebrewText(text, area = "general") {
+  const value = String(text || "");
+  if (area === "gemara" && !displaySettings.nikudGemara) return stripNikud(value);
+  if (area === "tanakh" && !displaySettings.nikudTanakh) return stripNikud(value);
+  return value;
+}
+
+function loadDisplaySettings() {
+  try {
+    const raw = localStorage.getItem(DISPLAY_SETTINGS_STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_DISPLAY_SETTINGS };
+    const parsed = JSON.parse(raw);
+    return {
+      ...DEFAULT_DISPLAY_SETTINGS,
+      ...Object.fromEntries(
+        Object.entries(DEFAULT_DISPLAY_SETTINGS).map(([key, defaultValue]) => {
+          const v = parsed?.[key];
+          return [key, typeof v === "boolean" ? v : defaultValue];
+        })
+      ),
+    };
+  } catch {
+    return { ...DEFAULT_DISPLAY_SETTINGS };
+  }
+}
+
+function saveDisplaySettings() {
+  try {
+    localStorage.setItem(DISPLAY_SETTINGS_STORAGE_KEY, JSON.stringify(displaySettings));
+  } catch {
+    // ignore storage issues
+  }
+}
+
+function applyDisplaySettingsToUi() {
+  document.body.classList.toggle("settings-rashi-script", Boolean(displaySettings.rashiFont));
+  if (commentaryPanelEl instanceof HTMLElement) commentaryPanelEl.hidden = !displaySettings.showCommentary;
+  if (halakhaPanelEl instanceof HTMLElement) halakhaPanelEl.hidden = !displaySettings.showHalakha;
+  if (tanakhPanelEl instanceof HTMLElement) tanakhPanelEl.hidden = !displaySettings.showTanakh;
+  if (genizahPanelEl instanceof HTMLElement) genizahPanelEl.hidden = !displaySettings.showGenizah;
+}
+
+function syncSettingsModalFromState() {
+  for (const [key, input] of Object.entries(settingsInputs)) {
+    if (input instanceof HTMLInputElement) input.checked = Boolean(displaySettings[key]);
+  }
+}
+
+function applySettingsFromModal() {
+  for (const [key, input] of Object.entries(settingsInputs)) {
+    if (input instanceof HTMLInputElement) {
+      displaySettings[key] = Boolean(input.checked);
+    }
+  }
+  saveDisplaySettings();
+  applyDisplaySettingsToUi();
+  applyLayout(currentLayout);
+}
+
+function closeSettingsModal(shouldApply = true) {
+  if (shouldApply) applySettingsFromModal();
+  if (settingsModalEl instanceof HTMLElement) settingsModalEl.hidden = true;
+  void rerenderVisiblePanels();
+}
+
+function openSettingsModal() {
+  if (!(settingsModalEl instanceof HTMLElement)) return;
+  syncSettingsModalFromState();
+  settingsModalEl.hidden = false;
 }
 
 function escapeRegExp(text) {
@@ -1955,7 +2144,7 @@ function renderFluentText(baseRef, segments) {
     span.className = "sentence";
     span.dataset.segment = String(seg.index);
     span.title = `${baseRef}:${seg.index}`;
-    span.innerHTML = `${enrichSageMentionsHtml(displayHebrewText(seg.he))} `;
+    span.innerHTML = `${enrichSageMentionsHtml(displayHebrewText(seg.he, "gemara"))} `;
     wrapper.appendChild(span);
   }
 
@@ -1974,32 +2163,6 @@ async function rerenderVisiblePanels() {
   highlightLockedSentence();
   await renderPanelsForSegment(lockedSegmentIndex, Boolean(lockedSegmentIndex));
   await renderTanakhPanel(pageTanakhRefs);
-}
-
-function updateNikudToggleUi() {
-  if (!(nikudToggleBtn instanceof HTMLButtonElement)) return;
-  nikudToggleBtn.classList.toggle("is-off", !showNikud);
-  nikudToggleBtn.classList.toggle("is-on", showNikud);
-  nikudToggleBtn.setAttribute("aria-pressed", showNikud ? "true" : "false");
-}
-
-function loadNikudPreference() {
-  try {
-    const raw = localStorage.getItem(NIKUD_STORAGE_KEY);
-    if (raw === "0") return false;
-    if (raw === "1") return true;
-  } catch {
-    // ignore storage issues
-  }
-  return true;
-}
-
-function saveNikudPreference() {
-  try {
-    localStorage.setItem(NIKUD_STORAGE_KEY, showNikud ? "1" : "0");
-  } catch {
-    // ignore storage issues
-  }
 }
 
 async function renderRefCards(container, refs, tokenType) {
@@ -2086,8 +2249,8 @@ async function renderTanakhPanel(refs) {
     const card = document.createElement("article");
     card.className = "ref-card";
     card.innerHTML = `
-      <p class="ref-title">${safeHtml(displayHebrewText(t.displayRef || t.ref))}</p>
-      <p class="ref-text">${safeHtml(displayHebrewText(t.full))}</p>
+      <p class="ref-title">${safeHtml(displayHebrewText(t.displayRef || t.ref, "tanakh"))}</p>
+      <p class="ref-text">${safeHtml(displayHebrewText(t.full, "tanakh"))}</p>
     `;
     tanakhListEl.appendChild(card);
   }
@@ -2325,17 +2488,43 @@ if (layoutSaveBtn instanceof HTMLButtonElement) {
   });
 }
 
-showNikud = loadNikudPreference();
-updateNikudToggleUi();
+displaySettings = loadDisplaySettings();
+applyDisplaySettingsToUi();
 
-if (nikudToggleBtn instanceof HTMLButtonElement) {
-  nikudToggleBtn.addEventListener("click", () => {
-    showNikud = !showNikud;
-    updateNikudToggleUi();
-    saveNikudPreference();
-    void rerenderVisiblePanels();
+if (settingsBtn instanceof HTMLButtonElement) {
+  settingsBtn.addEventListener("click", () => {
+    openSettingsModal();
   });
 }
+
+if (settingsApplyBtn instanceof HTMLButtonElement) {
+  settingsApplyBtn.addEventListener("click", () => {
+    closeSettingsModal(true);
+  });
+}
+
+if (settingsCloseBtn instanceof HTMLButtonElement) {
+  settingsCloseBtn.addEventListener("click", () => {
+    closeSettingsModal(true);
+  });
+}
+
+if (settingsModalEl instanceof HTMLElement) {
+  settingsModalEl.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.dataset.settingsClose === "1") {
+      closeSettingsModal(true);
+    }
+  });
+}
+
+window.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (!(settingsModalEl instanceof HTMLElement) || settingsModalEl.hidden) return;
+  event.preventDefault();
+  closeSettingsModal(true);
+});
 
 setLayoutEditMode(false);
 

@@ -200,12 +200,8 @@ body.genizah-connected .layout {
   background: linear-gradient(120deg, #2d7f61 0%, #44a07c 100%);
 }
 
-.nikud-toggle-btn {
+.settings-btn {
   background: linear-gradient(120deg, #3a4f86 0%, #5874b0 100%);
-}
-
-.nikud-toggle-btn.is-off {
-  background: linear-gradient(120deg, #6b6f7e 0%, #8a8e9a 100%);
 }
 
 .controls-credit {
@@ -262,6 +258,95 @@ body.genizah-connected .layout {
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms ease;
+}
+
+.panel-widget[hidden] {
+  display: none !important;
+}
+
+.settings-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+}
+
+.settings-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 19, 30, 0.42);
+}
+
+.settings-modal-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  border: 1px solid #d8cab0;
+  border-radius: 16px;
+  background: #fffdf8;
+  box-shadow: 0 24px 55px rgba(0, 0, 0, 0.25);
+  padding: 14px;
+}
+
+.settings-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.settings-modal-header h3 {
+  margin: 0;
+  font-family: "Frank Ruhl Libre", serif;
+  font-size: 1.45rem;
+}
+
+.settings-close-btn {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #d8cab0;
+  border-radius: 10px;
+  background: #fff;
+  color: #27303d;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.settings-options {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-options label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e4d9c7;
+  border-radius: 12px;
+  background: #fff;
+  padding: 9px 10px;
+  font-weight: 700;
+  color: #2f3744;
+}
+
+.settings-options input[type="checkbox"] {
+  min-width: 18px;
+  width: 18px;
+  height: 18px;
+  accent-color: #295f78;
+}
+
+.settings-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.settings-apply-btn {
+  background: linear-gradient(120deg, #2d7f61 0%, #44a07c 100%);
 }
 
 body.layout-edit-mode .panel-widget .panel-drag-handle,
@@ -742,9 +827,15 @@ body.lightbox-open {
   line-height: 1.6;
 }
 
+body.settings-rashi-script .commentary-panel .ref-text,
+body.settings-rashi-script .commentary-panel .quote-box {
+  font-family: "Noto Rashi Hebrew", "Rashi Script MT", "David Libre", serif;
+  font-size: 1.03rem;
+}
+
 .commentary-panel .ref-text,
 .commentary-panel .quote-box {
-  font-family: "Noto Rashi Hebrew", "Rashi Script MT", "David Libre", serif;
+  font-family: "Frank Ruhl Libre", serif;
   font-size: 1.03rem;
 }
 
