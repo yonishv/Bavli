@@ -14,6 +14,7 @@ const textMetaEl = document.getElementById("textMeta");
 const segmentsEl = document.getElementById("segments");
 
 const commentaryCountsEl = document.getElementById("commentaryCounts");
+const halakhaCountsEl = document.getElementById("halakhaCounts");
 const commentaryListEl = document.getElementById("commentaryList");
 const genizahListEl = document.getElementById("genizahList");
 const halakhaListEl = document.getElementById("halakhaList");
@@ -55,6 +56,8 @@ let genizahGroups = [];
 let currentSegments = [];
 let genizahSegmentToGroup = new Map();
 let commentaryCategory = "rt"; // rt | rishonim | acharonim | meiri
+let halakhaCategory = "";
+const HALAKHA_ALLOWED_CATEGORIES = new Set(["משנה תורה", "טור", "שו״ע", "סמ״ג"]);
 let commentaryToken = 0;
 let halakhaToken = 0;
 let tanakhToken = 0;
@@ -1107,7 +1110,50 @@ function isStrictTosafotRef(ref) {
 
 function commentaryCategoryOfRef(ref) {
   const n = canonicalRef(ref);
+  const raw = String(ref || "");
+  const key = raw.toLowerCase().replace(/[^a-z0-9\u0590-\u05ff]+/g, " ");
+
+  const isRaah = (
+    n.startsWith("raah on ") ||
+    n.startsWith("ra ah on ") ||
+    n.startsWith("ha raah on ") ||
+    n.startsWith("haraah on ") ||
+    n.startsWith("hidushei haraah on ") ||
+    n.startsWith("hidushei raah on ") ||
+    n.startsWith("hidushei ra ah on ") ||
+    n.startsWith("hidushei ha raah on ") ||
+    n.startsWith("hidushei ha-raah on ") ||
+    n.startsWith("chiddushei haraah on ") ||
+    n.startsWith("chiddushei raah on ") ||
+    n.startsWith("chiddushei ra ah on ") ||
+    n.startsWith("chiddushei ha raah on ") ||
+    n.startsWith("chiddushei ha-raah on ") ||
+    n.includes(" haraah on ") ||
+    n.includes(" raah on ") ||
+    n.includes(" ra ah on ") ||
+    n.includes(" ha raah on ") ||
+    n.includes(" ha-raah on ") ||
+    n.startsWith("rabbeinu aharon halevi on ") ||
+    n.startsWith("r aharon halevi on ") ||
+    n.includes(" aharon halevi on ") ||
+    key.includes("raah on ") ||
+    key.includes("ra ah on ") ||
+    key.includes("aharon halevi on ") ||
+    key.includes("rabbeinu aharon halevi") ||
+    key.includes("rav aharon halevi") ||
+    raw.includes("רא\"ה") ||
+    raw.includes("רא״ה") ||
+    raw.includes("הרא\"ה") ||
+    raw.includes("הרא״ה") ||
+    raw.includes("חידושי הרא\"ה") ||
+    raw.includes("חידושי הרא״ה") ||
+    raw.includes("ר׳ אהרן הלוי") ||
+    raw.includes("ר' אהרן הלוי") ||
+    raw.includes("רבינו אהרן הלוי")
+  );
+
   if (isStrictRashiRef(ref) || isStrictTosafotRef(ref)) return "rt";
+  if (isRaah) return "rishonim";
 
   if (n.startsWith("meiri on ")) return "meiri";
 
@@ -1115,6 +1161,12 @@ function commentaryCategoryOfRef(ref) {
   const rishonimStarts = [
     "rif on ",
     "rosh on ",
+    "tosafot harosh on ",
+    "tosafot ha rosh on ",
+    "tosafot hara\"sh on ",
+    "raah on ",
+    "r' aharon halevi on ",
+    "rabbi aharon halevi on ",
     "rabbeinu chananel on ",
     "ramban on ",
     "rashba on ",
@@ -1193,6 +1245,93 @@ function renderCommentaryCategoryChips(segmentRefs, meiriRefs) {
   }
 }
 
+function mapHalakhaSourceToHebrew(sourceName) {
+  const raw = String(sourceName || "").trim();
+  const n = canonicalRef(raw);
+  if (!raw) return "";
+  if (n.includes("mishneh torah") || raw.includes("משנה תורה") || raw.includes("רמב\"ם") || raw.includes("רמב״ם")) {
+    return "משנה תורה";
+  }
+  if (n.includes("tur") || n.includes("arbaah turim") || raw.includes("טור") || raw.includes("ארבעה טורים")) {
+    return "טור";
+  }
+  if (n.includes("shulchan arukh") || n.includes("shulchan aruch") || raw.includes("שולחן ערוך") || raw.includes("שו\"ע") || raw.includes("שו״ע")) {
+    return "שו״ע";
+  }
+  if (n.includes("beit yosef") || raw.includes("בית יוסף")) {
+    return "בית יוסף";
+  }
+  if (n.includes("sefer mitzvot gadol") || raw.includes("ספר מצוות גדול") || raw.includes("סמ\"ג") || raw.includes("סמ״ג")) {
+    return "סמ״ג";
+  }
+  if (n.includes("sefer mitzvot katan") || raw.includes("ספר מצוות קטן") || raw.includes("סמ\"ק") || raw.includes("סמ״ק")) {
+    return "סמ״ק";
+  }
+  return raw.replace(/_/g, " ").trim();
+}
+
+function halakhaSourceLabelOfRef(ref) {
+  const raw = String(ref || "").trim();
+  if (!raw) return "";
+  let source = raw;
+  const onMatch = raw.match(/^(.+?)\s+on\s+/i);
+  if (onMatch?.[1]) {
+    source = onMatch[1];
+  } else {
+    const commaMatch = raw.match(/^([^,]+),/);
+    if (commaMatch?.[1]) source = commaMatch[1];
+  }
+  return mapHalakhaSourceToHebrew(source);
+}
+
+function isAllowedHalakhaRef(ref) {
+  const label = halakhaSourceLabelOfRef(ref);
+  return HALAKHA_ALLOWED_CATEGORIES.has(label);
+}
+
+function filterHalakhaRefsByCategory(refs, category) {
+  if (!Array.isArray(refs) || !refs.length) return [];
+  const allowed = refs.filter((ref) => isAllowedHalakhaRef(ref));
+  if (!category) return allowed;
+  return allowed.filter((ref) => halakhaSourceLabelOfRef(ref) === category);
+}
+
+function renderHalakhaCategoryChips(refs) {
+  if (!(halakhaCountsEl instanceof HTMLElement)) return;
+  const counts = new Map();
+  for (const ref of refs || []) {
+    const label = halakhaSourceLabelOfRef(ref);
+    if (!HALAKHA_ALLOWED_CATEGORIES.has(label)) continue;
+    if (!label) continue;
+    counts.set(label, (counts.get(label) || 0) + 1);
+  }
+
+  const categories = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  if (!categories.length) {
+    halakhaCategory = "";
+    halakhaCountsEl.innerHTML = "";
+    return;
+  }
+
+  const available = new Set(categories.map(([label]) => label));
+  if (!halakhaCategory || !available.has(halakhaCategory)) {
+    halakhaCategory = categories[0][0];
+  }
+
+  halakhaCountsEl.innerHTML = "";
+  for (const [label, count] of categories) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `chip chip-filter${halakhaCategory === label ? " active" : ""}`;
+    btn.textContent = `${label} (${count})`;
+    btn.addEventListener("click", () => {
+      halakhaCategory = label;
+      void renderPanelsForSegment(lockedSegmentIndex || null, Boolean(lockedSegmentIndex));
+    });
+    halakhaCountsEl.appendChild(btn);
+  }
+}
+
 function sortCommentaryRefs(refs) {
   return [...refs].sort((a, b) => {
     const pa = commentaryPriority(a);
@@ -1200,6 +1339,25 @@ function sortCommentaryRefs(refs) {
     if (pa !== pb) return pa - pb;
     return canonicalRef(a).localeCompare(canonicalRef(b));
   });
+}
+
+async function filterRefsWithAvailableText(refs, limit = 80) {
+  const unique = [];
+  const seen = new Set();
+  for (const ref of refs || []) {
+    const key = String(ref || "").trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    unique.push(key);
+  }
+
+  const capped = unique.slice(0, Math.max(1, limit));
+  const items = await Promise.all(capped.map((ref) => getReferenceText(ref)));
+  const out = [];
+  for (let i = 0; i < capped.length; i += 1) {
+    if (!shouldIgnoreText(items[i]?.full)) out.push(capped[i]);
+  }
+  return out;
 }
 
 function isRashiRef(ref) {
@@ -2282,18 +2440,23 @@ async function renderPanelsForSegment(segmentIndex, pinned = false) {
     commentaryListEl.textContent = "רחף מעל משפט בגמרא כדי לראות פירושים.";
     halakhaListEl.textContent = "רחף מעל משפט בגמרא כדי לראות הלכה רלוונטית.";
     commentaryCountsEl.innerHTML = "";
+    if (halakhaCountsEl instanceof HTMLElement) halakhaCountsEl.innerHTML = "";
     renderGenizahForSegment(null);
     return;
   }
 
-  const commentaryRefs = sortCommentaryRefs(segmentCommentaryMap.get(segmentIndex) || []);
-  const halakhaRefs = segmentHalakhaMap.get(segmentIndex) || [];
-  renderCommentaryCategoryChips(commentaryRefs, pageMeiriRefs);
-  const filteredCommentaryRefs = filterCommentaryRefsByCategory(commentaryRefs, commentaryCategory, pageMeiriRefs);
+  const commentaryRefsRaw = sortCommentaryRefs(segmentCommentaryMap.get(segmentIndex) || []);
+  const commentaryRefs = await filterRefsWithAvailableText(commentaryRefsRaw, 120);
+  const meiriVisibleRefs = await filterRefsWithAvailableText(pageMeiriRefs || [], 80);
+  const halakhaRefs = (segmentHalakhaMap.get(segmentIndex) || []).filter((ref) => isAllowedHalakhaRef(ref));
+  renderCommentaryCategoryChips(commentaryRefs, meiriVisibleRefs);
+  renderHalakhaCategoryChips(halakhaRefs);
+  const filteredCommentaryRefs = filterCommentaryRefsByCategory(commentaryRefs, commentaryCategory, meiriVisibleRefs);
+  const filteredHalakhaRefs = filterHalakhaRefsByCategory(halakhaRefs, halakhaCategory);
 
   await Promise.all([
     renderRefCards(commentaryListEl, filteredCommentaryRefs, "commentary"),
-    renderRefCards(halakhaListEl, halakhaRefs, "halakha"),
+    renderRefCards(halakhaListEl, filteredHalakhaRefs, "halakha"),
   ]);
   renderGenizahForSegment(segmentIndex);
 }

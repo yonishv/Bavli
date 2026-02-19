@@ -204,6 +204,17 @@ body.genizah-connected .layout {
   background: linear-gradient(120deg, #3a4f86 0%, #5874b0 100%);
 }
 
+.site-logo {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid rgba(31, 95, 122, 0.22);
+  background: #ffffff;
+  padding: 3px;
+  flex: 0 0 auto;
+}
+
 .controls-credit {
   margin-inline-start: auto;
   text-align: right;
