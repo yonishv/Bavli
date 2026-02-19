@@ -888,6 +888,24 @@ function isHebrewLetterOrMark(ch) {
 }
 
 const HEB_PREFIX_LETTERS = new Set(["ו", "ב", "כ", "ל", "מ", "ש", "ה"]);
+const SUPPLEMENTAL_SAGE_LIST_URL = "/data/seder_tanaim_amoraim_names.json";
+const SUPPLEMENTAL_SAGE_MAX_TOKENS = 6;
+const SUPPLEMENTAL_SAGE_DISALLOWED_TOKENS = new Set([
+  "של",
+  "הוא",
+  "אביו",
+  "אביה",
+  "אמו",
+  "אחיו",
+  "אחותו",
+  "אשתו",
+  "תלמידו",
+  "רבו",
+]);
+const SUPPLEMENTAL_SAGE_GENERATION = "מתוך סדר תנאים ואמוראים";
+const SUPPLEMENTAL_SAGE_YESHIVA = "לא צוין";
+let supplementalSages = [];
+let sageMatcher = { byFirstToken: new Map(), allPatterns: [] };
 
 function indexOfAttachedPrefixLetter(input, start) {
   // Support prefixes attached to names, e.g. "כרבי יהושע" or "כּרבי".
@@ -926,25 +944,132 @@ function hebrewTokens(text, maxTokens = 32) {
   return tokens.slice(0, maxTokens);
 }
 
+function normalizeSageAliasKey(text) {
+  return normalizeHebrewForMatch(text);
+}
+
+function firstHebrewToken(text) {
+  const t = hebrewTokens(text, 1);
+  return t[0] || "";
+}
+
+function isLikelySupplementalSageName(rawName) {
+  const tokens = hebrewTokens(rawName, SUPPLEMENTAL_SAGE_MAX_TOKENS + 2);
+  if (!tokens.length) return false;
+  if (tokens.length < 2 || tokens.length > SUPPLEMENTAL_SAGE_MAX_TOKENS) return false;
+  return !tokens.some((tok) => SUPPLEMENTAL_SAGE_DISALLOWED_TOKENS.has(tok));
+}
+
+function buildSupplementalSagesFromItems(items) {
+  if (!Array.isArray(items)) return [];
+
+  const out = [];
+  const seen = new Set();
+
+  for (const item of items) {
+    const name = String(item?.name || "").trim();
+    if (!name || !isLikelySupplementalSageName(name)) continue;
+    const key = normalizeSageAliasKey(name);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      name,
+      aliases: [name],
+      generation: SUPPLEMENTAL_SAGE_GENERATION,
+      yeshiva: SUPPLEMENTAL_SAGE_YESHIVA,
+    });
+  }
+
+  return out;
+}
+
+function buildSageMatcher() {
+  const allSages = [...SAGE_INFO, ...supplementalSages];
+  const byFirstToken = new Map();
+  const allPatterns = [];
+  const seenVariants = new Set();
+
+  for (const sage of allSages) {
+    const variants = Array.isArray(sage.aliases) && sage.aliases.length ? sage.aliases : [sage.name];
+    for (const variant of variants) {
+      for (const v of generateAliasVariants(variant)) {
+        const normKey = normalizeSageAliasKey(v);
+        if (!normKey || seenVariants.has(normKey)) continue;
+        seenVariants.add(normKey);
+        const firstToken = firstHebrewToken(v);
+        if (!firstToken) continue;
+        const pattern = {
+          sage,
+          variant: v,
+          regex: new RegExp(buildHebrewFlexiblePattern(v), "gu"),
+        };
+        allPatterns.push(pattern);
+        if (!byFirstToken.has(firstToken)) byFirstToken.set(firstToken, []);
+        byFirstToken.get(firstToken).push(pattern);
+      }
+    }
+  }
+
+  for (const arr of byFirstToken.values()) {
+    arr.sort((a, b) => b.variant.length - a.variant.length);
+  }
+  allPatterns.sort((a, b) => b.variant.length - a.variant.length);
+  sageMatcher = { byFirstToken, allPatterns };
+}
+
+async function loadSupplementalSages() {
+  try {
+    const res = await fetch(SUPPLEMENTAL_SAGE_LIST_URL);
+    if (!res.ok) return;
+    const payload = await res.json();
+    const extracted = buildSupplementalSagesFromItems(payload?.items);
+    if (!extracted.length) return;
+    supplementalSages = extracted;
+    buildSageMatcher();
+    if (currentSegments.length) {
+      await rerenderVisiblePanels();
+    }
+  } catch {
+    // Keep base matching behavior if supplemental list is unavailable.
+  }
+}
+
 function enrichSageMentionsHtml(text) {
   const input = String(text || "");
   if (!input) return "";
 
-  const sagePatterns = [];
-  for (const sage of SAGE_INFO) {
-    const variants = Array.isArray(sage.aliases) && sage.aliases.length ? sage.aliases : [sage.name];
-    for (const variant of variants) {
-      for (const v of generateAliasVariants(variant)) {
-        sagePatterns.push({ sage, variant: v });
+  if (!sageMatcher.allPatterns.length) {
+    buildSageMatcher();
+  }
+
+  const candidatePatterns = [];
+  const seenPattern = new Set();
+  const textTokens = hebrewTokens(input, 128);
+  for (const tok of textTokens) {
+    if (!tok) continue;
+    const direct = sageMatcher.byFirstToken.get(tok) || [];
+    for (const p of direct) {
+      if (seenPattern.has(p.variant)) continue;
+      seenPattern.add(p.variant);
+      candidatePatterns.push(p);
+    }
+    if (tok.length > 1 && HEB_PREFIX_LETTERS.has(tok[0])) {
+      const stripped = tok.slice(1);
+      const prefixed = sageMatcher.byFirstToken.get(stripped) || [];
+      for (const p of prefixed) {
+        if (seenPattern.has(p.variant)) continue;
+        seenPattern.add(p.variant);
+        candidatePatterns.push(p);
       }
     }
   }
-  sagePatterns.sort((a, b) => b.variant.length - a.variant.length);
 
   const candidates = [];
 
-  for (const entry of sagePatterns) {
-    const regex = new RegExp(buildHebrewFlexiblePattern(entry.variant), "gu");
+  const patterns = candidatePatterns.length ? candidatePatterns : sageMatcher.allPatterns;
+  for (const entry of patterns) {
+    const regex = entry.regex;
+    regex.lastIndex = 0;
     let m;
     while ((m = regex.exec(input)) !== null) {
       const start = m.index;
@@ -2726,6 +2851,7 @@ populateTractateOptions();
 tractateSelect.value = "Berakhot";
 populateDafOptions("Berakhot", "2a");
 void refreshGenizahAuthStatus();
+void loadSupplementalSages();
 
 loadRef(currentRef).catch((error) => {
   setStatus(`טעינה ראשונית נכשלה: ${error.message}`);
