@@ -35,6 +35,7 @@ const genizahPanelEl = layoutGridEl?.querySelector('[data-widget-id="genizah"]')
 const settingsInputs = {
   nikudGemara: document.getElementById("settingNikudGemara"),
   nikudTanakh: document.getElementById("settingNikudTanakh"),
+  showSteinsaltz: document.getElementById("settingShowSteinsaltz"),
   rashiFont: document.getElementById("settingRashiFont"),
   showCommentary: document.getElementById("settingShowCommentary"),
   showHalakha: document.getElementById("settingShowHalakha"),
@@ -50,6 +51,7 @@ let currentRef = "Berakhot.2a";
 let lockedSegmentIndex = null;
 let segmentCommentaryMap = new Map();
 let segmentHalakhaMap = new Map();
+let segmentSteinsaltzMap = new Map();
 let pageTanakhRefs = [];
 let pageMeiriRefs = [];
 let genizahGroups = [];
@@ -93,6 +95,7 @@ let currentLayout = cloneLayout(DEFAULT_LAYOUT);
 const DEFAULT_DISPLAY_SETTINGS = {
   nikudGemara: true,
   nikudTanakh: true,
+  showSteinsaltz: false,
   rashiFont: true,
   showCommentary: true,
   showHalakha: true,
@@ -1830,9 +1833,11 @@ function isTanakhLink(linkItem, sourceRef) {
 function buildReferenceMaps(baseRef, links, segmentCount) {
   const commentarySets = new Map();
   const halakhaSets = new Map();
+  const steinsaltzSets = new Map();
   for (let i = 1; i <= segmentCount; i += 1) {
     commentarySets.set(i, new Set());
     halakhaSets.set(i, new Set());
+    steinsaltzSets.set(i, new Set());
   }
 
   const tanakhSet = new Set();
@@ -1865,6 +1870,10 @@ function buildReferenceMaps(baseRef, links, segmentCount) {
 
     if (!segmentIdx) continue;
 
+    if (isSteinsaltzRef(sourceRef) && refMatchesBaseDaf(sourceRef, baseRef)) {
+      steinsaltzSets.get(segmentIdx).add(sourceRef);
+    }
+
     if (isCommentaryLink(link, sourceRef)) {
       if (!refMatchesBaseDaf(sourceRef, baseRef)) continue;
 
@@ -1885,12 +1894,14 @@ function buildReferenceMaps(baseRef, links, segmentCount) {
 
   const commentaryMap = new Map();
   const halakhaMap = new Map();
+  const steinsaltzMap = new Map();
   for (let i = 1; i <= segmentCount; i += 1) {
     commentaryMap.set(i, [...commentarySets.get(i)]);
     halakhaMap.set(i, [...halakhaSets.get(i)]);
+    steinsaltzMap.set(i, [...steinsaltzSets.get(i)]);
   }
 
-  return { commentaryMap, halakhaMap, tanakhRefs: [...tanakhSet], meiriRefs: [...meiriSet] };
+  return { commentaryMap, halakhaMap, steinsaltzMap, tanakhRefs: [...tanakhSet], meiriRefs: [...meiriSet] };
 }
 
 async function fetchJson(url) {
@@ -2433,7 +2444,26 @@ async function getReferenceText(ref) {
   }
 }
 
-function renderFluentText(baseRef, segments) {
+async function getSteinsaltzInlineTextForSegment(segmentIndex) {
+  const refs = segmentSteinsaltzMap.get(segmentIndex) || [];
+  for (const ref of refs) {
+    const item = await getReferenceText(ref);
+    if (!item || shouldIgnoreText(item.full)) continue;
+    const plain = stripFormatting(item.full);
+    let noNikud = stripNikud(plain);
+    // Cleanup occasional leading artifacts from source formatting
+    // (e.g. stray single letter like "ב", or latin marker tokens).
+    noNikud = noNikud
+      .replace(/^(?:[A-Za-z]+)\s+/u, "")
+      .replace(/^(?:[\u05D0-\u05EA])\s+/u, "")
+      .trim();
+    if (!noNikud) continue;
+    return noNikud;
+  }
+  return "";
+}
+
+async function renderFluentText(baseRef, segments) {
   segmentsEl.innerHTML = "";
   if (!segments.length) {
     segmentsEl.innerHTML = "<p>לא נמצאו מקטעים בדף זה.</p>";
@@ -2442,6 +2472,14 @@ function renderFluentText(baseRef, segments) {
 
   const wrapper = document.createElement("div");
   wrapper.className = "fluent-text";
+  const steinsaltzTextBySegment = new Map();
+
+  if (displaySettings.showSteinsaltz) {
+    const pairs = await Promise.all(
+      segments.map(async (seg) => [seg.index, await getSteinsaltzInlineTextForSegment(seg.index)])
+    );
+    for (const [idx, text] of pairs) steinsaltzTextBySegment.set(idx, text);
+  }
 
   for (const seg of segments) {
     const span = document.createElement("span");
@@ -2450,6 +2488,16 @@ function renderFluentText(baseRef, segments) {
     span.title = `${baseRef}:${seg.index}`;
     span.innerHTML = `${enrichSageMentionsHtml(displayHebrewText(seg.he, "gemara"))} `;
     wrapper.appendChild(span);
+
+    if (displaySettings.showSteinsaltz) {
+      const steinsaltzText = steinsaltzTextBySegment.get(seg.index) || "";
+      if (steinsaltzText) {
+        const stein = document.createElement("span");
+        stein.className = "steinsaltz-inline";
+        stein.textContent = `${steinsaltzText} `;
+        wrapper.appendChild(stein);
+      }
+    }
   }
 
   segmentsEl.appendChild(wrapper);
@@ -2463,7 +2511,7 @@ function highlightLockedSentence() {
 }
 
 async function rerenderVisiblePanels() {
-  renderFluentText(currentRef, currentSegments);
+  await renderFluentText(currentRef, currentSegments);
   highlightLockedSentence();
   await renderPanelsForSegment(lockedSegmentIndex, Boolean(lockedSegmentIndex));
   await renderTanakhPanel(pageTanakhRefs);
@@ -2606,6 +2654,7 @@ async function loadRef(rawRef) {
   const maps = buildReferenceMaps(ref, links, segments.length);
   segmentCommentaryMap = maps.commentaryMap;
   segmentHalakhaMap = maps.halakhaMap;
+  segmentSteinsaltzMap = maps.steinsaltzMap;
   pageTanakhRefs = maps.tanakhRefs;
   pageMeiriRefs = maps.meiriRefs || [];
 
@@ -2616,7 +2665,7 @@ async function loadRef(rawRef) {
   dafTitleEl.textContent = textPayload?.ref || ref;
   textMetaEl.textContent = `${segments.length} מקטעים, ${links.length} קישורים ישירים, מקור: API של ספריא`;
 
-  renderFluentText(ref, segments);
+  await renderFluentText(ref, segments);
   await renderPanelsForSegment(null, false);
   await renderTanakhPanel(pageTanakhRefs);
   await loadGenizahForRef(ref);

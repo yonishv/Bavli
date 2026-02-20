@@ -559,6 +559,13 @@ button:hover {
   transition: background-color 140ms ease, box-shadow 140ms ease;
 }
 
+.steinsaltz-inline {
+  display: inline;
+  font-size: 0.8em;
+  line-height: 1.8;
+  color: #4e596e;
+}
+
 .sentence:hover {
   background: #f4e2c6;
   box-shadow: 0 0 0 1px rgba(197, 136, 74, 0.26);
