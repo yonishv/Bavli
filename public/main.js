@@ -1,6 +1,8 @@
 const loadForm = document.getElementById("loadForm");
 const tractateSelect = document.getElementById("tractateSelect");
 const dafSelect = document.getElementById("dafSelect");
+const prevDafBtn = document.getElementById("prevDafBtn");
+const nextDafBtn = document.getElementById("nextDafBtn");
 const dafYomiBtn = document.getElementById("dafYomiBtn");
 const genizahLoginForm = document.getElementById("genizahLoginForm");
 const genizahUsernameEl = document.getElementById("genizahUsername");
@@ -24,14 +26,23 @@ const controlsPanelEl = layoutGridEl?.querySelector('[data-widget-id="controls"]
 const layoutEditToggleBtn = document.getElementById("layoutEditToggleBtn");
 const layoutSaveBtn = document.getElementById("layoutSaveBtn");
 const layoutResetBtn = document.getElementById("layoutResetBtn");
+const genizahModeBtn = document.getElementById("genizahModeBtn");
 const settingsBtn = document.getElementById("settingsBtn");
 const settingsModalEl = document.getElementById("settingsModal");
 const settingsCloseBtn = document.getElementById("settingsCloseBtn");
 const settingsApplyBtn = document.getElementById("settingsApplyBtn");
 const commentaryPanelEl = layoutGridEl?.querySelector('[data-widget-id="commentary"]');
+const manuscriptPanelEl = layoutGridEl?.querySelector('[data-widget-id="manuscript"]');
 const halakhaPanelEl = layoutGridEl?.querySelector('[data-widget-id="halakha"]');
 const tanakhPanelEl = layoutGridEl?.querySelector('[data-widget-id="tanakh"]');
 const genizahPanelEl = layoutGridEl?.querySelector('[data-widget-id="genizah"]');
+const manuscriptTitleEl = document.getElementById("manuscriptTitle");
+const manuscriptEmptyEl = document.getElementById("manuscriptEmpty");
+const manuscriptFrameEl = document.getElementById("manuscriptFrame");
+const manuscriptImageEl = document.getElementById("manuscriptImage");
+const manuscriptZoomOutBtn = document.getElementById("manuscriptZoomOutBtn");
+const manuscriptZoomInBtn = document.getElementById("manuscriptZoomInBtn");
+const manuscriptResetBtn = document.getElementById("manuscriptResetBtn");
 const settingsInputs = {
   nikudGemara: document.getElementById("settingNikudGemara"),
   nikudTanakh: document.getElementById("settingNikudTanakh"),
@@ -70,12 +81,13 @@ const LAYOUT_STORAGE_KEY = "bavli.layout.v1";
 const DISPLAY_SETTINGS_STORAGE_KEY = "bavli.display.settings.v1";
 const GRID_COLS = 12;
 const GRID_ROWS = 12;
-const WIDGET_IDS = ["controls", "commentary", "text", "halakha", "tanakh", "genizah"];
-const MOVABLE_WIDGET_IDS = ["commentary", "text", "halakha", "tanakh", "genizah"];
+const WIDGET_IDS = ["controls", "commentary", "text", "manuscript", "halakha", "tanakh", "genizah"];
+const MOVABLE_WIDGET_IDS = ["commentary", "text", "manuscript", "halakha", "tanakh", "genizah"];
 const WIDGET_LABELS_HE = {
   controls: "בחירה וחיבור",
   commentary: "מפרשים",
   text: "טקסט הגמרא",
+  manuscript: "תמונת כתב יד",
   halakha: "עין משפט",
   tanakh: "תורה אור",
   genizah: "חילופי נוסח",
@@ -87,6 +99,7 @@ const DEFAULT_LAYOUT = {
   // Bottom row: Torah Or (left) | Genizah (center+right)
   commentary: { col: 1, row: 3, colSpan: 3, rowSpan: 7 },
   text: { col: 4, row: 3, colSpan: 6, rowSpan: 7 },
+  manuscript: { col: 1, row: 10, colSpan: 3, rowSpan: 3 },
   halakha: { col: 10, row: 3, colSpan: 3, rowSpan: 5 },
   tanakh: { col: 10, row: 8, colSpan: 3, rowSpan: 5 },
   genizah: { col: 1, row: 10, colSpan: 9, rowSpan: 3 },
@@ -103,11 +116,16 @@ const DEFAULT_DISPLAY_SETTINGS = {
   showGenizah: true,
 };
 let displaySettings = { ...DEFAULT_DISPLAY_SETTINGS };
+let genizahModeEnabled = false;
+let preGenizahModeDisplaySettings = null;
 let genizahLightboxEl = null;
 let genizahLightboxImgEl = null;
 let genizahLightboxZoom = 1;
 let genizahLightboxPanX = 0;
 let genizahLightboxPanY = 0;
+let manuscriptZoom = 1;
+let manuscriptPanX = 0;
+let manuscriptPanY = 0;
 let lastGenizahSegmentIndex = null;
 const GENIZAH_LIGHTBOX_ZOOM_MIN = 1;
 const GENIZAH_LIGHTBOX_ZOOM_MAX = 4;
@@ -235,6 +253,177 @@ function setStatus(message) {
   statusEl.hidden = !text;
 }
 
+function clearManuscriptImage(message = "לחץ על סמל התמונה בחלון הכי גרסינן כדי להציג צילום כתב יד.") {
+  if (manuscriptTitleEl instanceof HTMLElement) manuscriptTitleEl.textContent = "תמונת כתב יד";
+  if (manuscriptImageEl instanceof HTMLImageElement) manuscriptImageEl.removeAttribute("src");
+  resetManuscriptTransform();
+  if (manuscriptFrameEl instanceof HTMLElement) manuscriptFrameEl.hidden = true;
+  if (manuscriptEmptyEl instanceof HTMLElement) {
+    manuscriptEmptyEl.hidden = false;
+    manuscriptEmptyEl.textContent = message;
+  }
+}
+
+function showManuscriptImage(src, witnessTitle = "", initialZoom = 1) {
+  const value = String(src || "").trim();
+  if (!value || !(manuscriptImageEl instanceof HTMLImageElement)) {
+    clearManuscriptImage();
+    return;
+  }
+  manuscriptImageEl.src = value;
+  const normalizedZoom = Number.isFinite(initialZoom) ? Math.max(1, Number(initialZoom)) : 1;
+  manuscriptZoom = normalizedZoom;
+  manuscriptPanX = 0;
+  manuscriptPanY = 0;
+  applyManuscriptTransform();
+  if (manuscriptFrameEl instanceof HTMLElement) manuscriptFrameEl.hidden = false;
+  if (manuscriptEmptyEl instanceof HTMLElement) manuscriptEmptyEl.hidden = true;
+  if (manuscriptTitleEl instanceof HTMLElement) {
+    manuscriptTitleEl.textContent = witnessTitle ? `תמונת כתב יד: ${witnessTitle}` : "תמונת כתב יד";
+  }
+}
+
+function pickPreferredManuscriptVariant(group) {
+  const variants = Array.isArray(group?.variants) ? group.variants : [];
+  if (!variants.length) return null;
+  const soncino = variants.find((v) => /soncino|סונצ|שונצ/i.test(String(v?.codexName || "")));
+  if (soncino) return soncino;
+  const vilna = variants.find((v) => String(v?.codexName || "").includes("וילנא"));
+  return vilna || variants[0];
+}
+
+function openDefaultManuscriptForSelectedSentence() {
+  const selectedSegmentIndex = lockedSegmentIndex || lastGenizahSegmentIndex || null;
+  if (!selectedSegmentIndex) {
+    clearManuscriptImage();
+    return;
+  }
+  const group = pickGenizahGroupForSegment(selectedSegmentIndex);
+  if (!group) {
+    clearManuscriptImage("לא נמצאה תמונה למשפט שנבחר.");
+    return;
+  }
+  const preferredVariant = pickPreferredManuscriptVariant(group);
+  const imageHref = buildGenizahImageLink(preferredVariant);
+  if (!preferredVariant || !imageHref) {
+    clearManuscriptImage("לא נמצאה תמונה למשפט שנבחר.");
+    return;
+  }
+  showManuscriptImage(imageHref, preferredVariant.codexName || "", 2);
+}
+
+function applyManuscriptTransform() {
+  if (!(manuscriptImageEl instanceof HTMLImageElement) || !(manuscriptResetBtn instanceof HTMLButtonElement)) return;
+  const bounded = Math.max(GENIZAH_LIGHTBOX_ZOOM_MIN, Math.min(GENIZAH_LIGHTBOX_ZOOM_MAX, manuscriptZoom));
+  manuscriptZoom = bounded;
+  manuscriptImageEl.style.transform = `translate(${manuscriptPanX}px, ${manuscriptPanY}px) scale(${bounded})`;
+  manuscriptImageEl.style.transformOrigin = "center center";
+  manuscriptImageEl.style.cursor = bounded > 1 ? "grab" : "zoom-in";
+  manuscriptResetBtn.textContent = `${Math.round(bounded * 100)}%`;
+}
+
+function resetManuscriptTransform() {
+  manuscriptZoom = 1;
+  manuscriptPanX = 0;
+  manuscriptPanY = 0;
+  if (manuscriptImageEl instanceof HTMLImageElement) {
+    manuscriptImageEl.classList.remove("is-dragging");
+  }
+  applyManuscriptTransform();
+}
+
+function adjustManuscriptZoom(delta) {
+  manuscriptZoom += delta;
+  applyManuscriptTransform();
+}
+
+function initManuscriptInteractions() {
+  if (!(manuscriptFrameEl instanceof HTMLElement) || !(manuscriptImageEl instanceof HTMLImageElement)) return;
+
+  if (manuscriptZoomInBtn instanceof HTMLButtonElement) {
+    manuscriptZoomInBtn.addEventListener("click", () => adjustManuscriptZoom(GENIZAH_LIGHTBOX_ZOOM_STEP));
+  }
+  if (manuscriptZoomOutBtn instanceof HTMLButtonElement) {
+    manuscriptZoomOutBtn.addEventListener("click", () => adjustManuscriptZoom(-GENIZAH_LIGHTBOX_ZOOM_STEP));
+  }
+  if (manuscriptResetBtn instanceof HTMLButtonElement) {
+    manuscriptResetBtn.addEventListener("click", () => resetManuscriptTransform());
+  }
+
+  manuscriptFrameEl.addEventListener(
+    "wheel",
+    (ev) => {
+      ev.preventDefault();
+      adjustManuscriptZoom(ev.deltaY < 0 ? GENIZAH_LIGHTBOX_ZOOM_STEP : -GENIZAH_LIGHTBOX_ZOOM_STEP);
+    },
+    { passive: false }
+  );
+
+  let isDragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let dragStartPanX = 0;
+  let dragStartPanY = 0;
+
+  manuscriptImageEl.addEventListener("mousedown", (ev) => {
+    if (manuscriptZoom <= 1) return;
+    ev.preventDefault();
+    isDragging = true;
+    dragStartX = ev.clientX;
+    dragStartY = ev.clientY;
+    dragStartPanX = manuscriptPanX;
+    dragStartPanY = manuscriptPanY;
+    manuscriptImageEl.classList.add("is-dragging");
+    manuscriptImageEl.style.cursor = "grabbing";
+  });
+
+  window.addEventListener("mousemove", (ev) => {
+    if (!isDragging) return;
+    manuscriptPanX = dragStartPanX + (ev.clientX - dragStartX);
+    manuscriptPanY = dragStartPanY + (ev.clientY - dragStartY);
+    applyManuscriptTransform();
+  });
+
+  window.addEventListener("mouseup", () => {
+    if (!isDragging) return;
+    isDragging = false;
+    manuscriptImageEl.classList.remove("is-dragging");
+    applyManuscriptTransform();
+  });
+}
+
+function syncGenizahModeButton() {
+  if (!(genizahModeBtn instanceof HTMLButtonElement)) return;
+  genizahModeBtn.classList.toggle("active", genizahModeEnabled);
+  genizahModeBtn.setAttribute("aria-pressed", genizahModeEnabled ? "true" : "false");
+  genizahModeBtn.textContent = genizahModeEnabled ? "מצב עיון" : "הכי גרסינן";
+}
+
+function setGenizahModeEnabled(enabled) {
+  const next = Boolean(enabled);
+  if (next === genizahModeEnabled) return;
+
+  if (next) {
+    preGenizahModeDisplaySettings = { ...displaySettings };
+    displaySettings.showCommentary = false;
+    displaySettings.showHalakha = false;
+    displaySettings.showTanakh = false;
+    displaySettings.showGenizah = true;
+  } else if (preGenizahModeDisplaySettings) {
+    displaySettings = { ...displaySettings, ...preGenizahModeDisplaySettings };
+    preGenizahModeDisplaySettings = null;
+    clearManuscriptImage();
+  }
+
+  genizahModeEnabled = next;
+  applyDisplaySettingsToUi();
+  applyLayout(currentLayout);
+  syncGenizahModeButton();
+  if (settingsModalEl instanceof HTMLElement && !settingsModalEl.hidden) syncSettingsModalFromState();
+  if (next) openDefaultManuscriptForSelectedSentence();
+  void rerenderVisiblePanels();
+}
+
 function setGenizahAuthStatus(message, connected = false) {
   genizahConnected = Boolean(connected);
   document.body.classList.toggle("genizah-connected", genizahConnected);
@@ -260,6 +449,7 @@ function cloneLayout(layout) {
 }
 
 function getVisibleDataWidgetIds() {
+  if (genizahModeEnabled) return ["manuscript", "genizah", "text"];
   const ids = [];
   if (displaySettings.showCommentary) ids.push("commentary");
   if (displaySettings.showHalakha) ids.push("halakha");
@@ -270,7 +460,47 @@ function getVisibleDataWidgetIds() {
   return ids;
 }
 
+function maxGridRowsForLayoutFraction(fraction) {
+  if (!(layoutGridEl instanceof HTMLElement)) return GRID_ROWS;
+  const f = Math.max(0, Math.min(1, Number(fraction) || 0));
+  if (f <= 0) return 1;
+
+  const gridRect = layoutGridEl.getBoundingClientRect();
+  const styles = window.getComputedStyle(layoutGridEl);
+  const rowGap = Number.parseFloat(styles.rowGap) || 0;
+  const rowTrack = (gridRect.height - rowGap * (GRID_ROWS - 1)) / GRID_ROWS;
+  if (!Number.isFinite(rowTrack) || rowTrack <= 0) return GRID_ROWS;
+
+  const maxPx = Math.max(1, gridRect.height * f);
+  for (let rows = 1; rows <= GRID_ROWS; rows += 1) {
+    const spanHeight = rows * rowTrack + (rows - 1) * rowGap;
+    if (spanHeight > maxPx) return Math.max(1, rows - 1);
+  }
+  return GRID_ROWS;
+}
+
 function buildRuleBasedDataLayout(controlsRowSpan) {
+  if (genizahModeEnabled) {
+    const dataStartRow = Math.min(GRID_ROWS, controlsRowSpan + 1);
+    const dataRows = Math.max(1, GRID_ROWS - controlsRowSpan);
+    const minBottomRows = dataRows > 1 ? 1 : 0;
+    const estimatedBottomRows = Math.max(minBottomRows, Math.min(dataRows - 1, estimateNeededGenizahRows(controlsRowSpan)));
+    const bottomRowsCap = maxGridRowsForLayoutFraction(1 / 3);
+    const bottomRows = dataRows > 1
+      ? Math.max(minBottomRows, Math.min(estimatedBottomRows, bottomRowsCap, dataRows - 1))
+      : estimatedBottomRows;
+    const topRows = Math.max(1, dataRows - bottomRows);
+
+    return {
+      text: { col: 1, row: dataStartRow, colSpan: 6, rowSpan: topRows },
+      manuscript: { col: 7, row: dataStartRow, colSpan: 6, rowSpan: topRows },
+      genizah: { col: 1, row: dataStartRow + topRows, colSpan: 12, rowSpan: bottomRows },
+      commentary: { ...DEFAULT_LAYOUT.commentary },
+      halakha: { ...DEFAULT_LAYOUT.halakha },
+      tanakh: { ...DEFAULT_LAYOUT.tanakh },
+    };
+  }
+
   const showCommentary = Boolean(displaySettings.showCommentary);
   const showHalakha = Boolean(displaySettings.showHalakha);
   const showTanakh = Boolean(displaySettings.showTanakh);
@@ -283,6 +513,7 @@ function buildRuleBasedDataLayout(controlsRowSpan) {
 
   const layout = {
     text: { ...DEFAULT_LAYOUT.text },
+    manuscript: { ...DEFAULT_LAYOUT.manuscript },
     commentary: { ...DEFAULT_LAYOUT.commentary },
     halakha: { ...DEFAULT_LAYOUT.halakha },
     tanakh: { ...DEFAULT_LAYOUT.tanakh },
@@ -344,6 +575,63 @@ function stretchDataPanelsToBottom(layout, dataIds) {
   }
 }
 
+function alignDataPanelsUnderControls(layout, dataIds, controlsRowSpan) {
+  const ids = Array.isArray(dataIds) ? dataIds : [];
+  if (!ids.length) return;
+  const desiredStartRow = Math.min(GRID_ROWS, Math.max(1, controlsRowSpan + 1));
+  let minRow = Infinity;
+
+  for (const id of ids) {
+    const r = layout?.[id];
+    if (!r) continue;
+    if (r.row < minRow) minRow = r.row;
+  }
+
+  if (!Number.isFinite(minRow)) return;
+  const rawShift = desiredStartRow - minRow;
+  if (!rawShift) return;
+
+  // Keep every panel inside grid bounds after shifting.
+  let shift = rawShift;
+  for (const id of ids) {
+    const r = layout?.[id];
+    if (!r) continue;
+    const minShift = 1 - r.row;
+    const maxShift = GRID_ROWS - (r.row + r.rowSpan - 1);
+    if (shift < minShift) shift = minShift;
+    if (shift > maxShift) shift = maxShift;
+  }
+  if (!shift) return;
+
+  for (const id of ids) {
+    const r = layout?.[id];
+    if (!r) continue;
+    r.row += shift;
+  }
+}
+
+function anchorGenizahBottomAndGrowUpper(layout, dataIds) {
+  const ids = Array.isArray(dataIds) ? dataIds : [];
+  if (!ids.includes("genizah")) return;
+  const genizahRect = layout?.genizah;
+  if (!genizahRect) return;
+
+  // Keep Genizah anchored to the bottom edge in standard mode.
+  genizahRect.row = Math.max(1, GRID_ROWS - genizahRect.rowSpan + 1);
+  const upperBottom = genizahRect.row - 1;
+  if (upperBottom < 1) return;
+
+  // Grow upper panels to use all space above Genizah.
+  for (const id of ids) {
+    if (id === "genizah") continue;
+    const rect = layout?.[id];
+    if (!rect) continue;
+    const currentBottom = rect.row + rect.rowSpan - 1;
+    if (rect.row > upperBottom || currentBottom >= upperBottom) continue;
+    rect.rowSpan = upperBottom - rect.row + 1;
+  }
+}
+
 function isValidRect(r) {
   if (!r) return false;
   if (![r.col, r.row, r.colSpan, r.rowSpan].every((n) => Number.isFinite(n))) return false;
@@ -389,6 +677,7 @@ function applyLayout(layout) {
   const baseControlsRows = Math.max(1, Number(layout?.controls?.rowSpan) || 1);
   const visibleDataIds = getVisibleDataWidgetIds();
   const activeIds = ["controls", ...visibleDataIds];
+  let standardGenizahRowCap = null;
 
   if (genizahConnected) {
     // Connected mode must always be a single top line.
@@ -416,7 +705,26 @@ function applyLayout(layout) {
     }
   }
 
+  if (!genizahModeEnabled && displaySettings.showGenizah && effective.genizah) {
+    const savedMaxRows = Math.max(1, Number(layout?.genizah?.rowSpan) || DEFAULT_LAYOUT.genizah.rowSpan);
+    const maxByGrid = Math.max(1, GRID_ROWS - effective.genizah.row + 1);
+    standardGenizahRowCap = Math.max(1, Math.min(savedMaxRows, maxByGrid));
+    const neededRows = estimateNeededGenizahRows(
+      effective.controls.rowSpan,
+      effective.genizah.colSpan,
+      standardGenizahRowCap
+    );
+    effective.genizah.rowSpan = Math.max(1, Math.min(standardGenizahRowCap, neededRows));
+  }
+
+  alignDataPanelsUnderControls(effective, visibleDataIds, effective.controls.rowSpan);
+  if (!genizahModeEnabled && displaySettings.showGenizah) {
+    anchorGenizahBottomAndGrowUpper(effective, visibleDataIds);
+  }
   stretchDataPanelsToBottom(effective, visibleDataIds);
+  if (standardGenizahRowCap && effective.genizah) {
+    effective.genizah.rowSpan = Math.min(effective.genizah.rowSpan, standardGenizahRowCap);
+  }
 
   const check = validateLayout(effective, activeIds);
   if (!check.ok) {
@@ -497,6 +805,76 @@ function estimateNeededControlRows() {
   return GRID_ROWS;
 }
 
+function estimateNeededGenizahRows(controlsRowSpan, colSpan = GRID_COLS, maxRows = null) {
+  if (!(layoutGridEl instanceof HTMLElement) || !(genizahPanelEl instanceof HTMLElement) || !(genizahListEl instanceof HTMLElement)) {
+    return 1;
+  }
+
+  const gridRect = layoutGridEl.getBoundingClientRect();
+  const styles = window.getComputedStyle(layoutGridEl);
+  const rowGap = Number.parseFloat(styles.rowGap) || 0;
+  const colGap = Number.parseFloat(styles.columnGap) || 0;
+  const rowTrack = (gridRect.height - rowGap * (GRID_ROWS - 1)) / GRID_ROWS;
+  const colTrack = (gridRect.width - colGap * (GRID_COLS - 1)) / GRID_COLS;
+  const spanCols = Math.max(1, Math.min(GRID_COLS, Number(colSpan) || GRID_COLS));
+  const panelWidth = colTrack * spanCols + colGap * (spanCols - 1);
+  const computedMaxRows = Number.isFinite(maxRows) ? Math.max(1, Number(maxRows)) : Math.max(1, GRID_ROWS - controlsRowSpan);
+
+  if (!Number.isFinite(rowTrack) || rowTrack <= 0 || !Number.isFinite(panelWidth) || panelWidth <= 0) {
+    return 1;
+  }
+
+  const prevPanelWidth = genizahPanelEl.style.width;
+  const prevPanelMaxWidth = genizahPanelEl.style.maxWidth;
+  const prevListHeight = genizahListEl.style.height;
+  const prevListMaxHeight = genizahListEl.style.maxHeight;
+  const prevListOverflow = genizahListEl.style.overflow;
+
+  genizahPanelEl.style.width = `${panelWidth}px`;
+  genizahPanelEl.style.maxWidth = `${panelWidth}px`;
+  genizahListEl.style.height = "auto";
+  genizahListEl.style.maxHeight = "none";
+  genizahListEl.style.overflow = "visible";
+
+  const panelStyles = window.getComputedStyle(genizahPanelEl);
+  const panelPaddingTop = Number.parseFloat(panelStyles.paddingTop) || 0;
+  const panelPaddingBottom = Number.parseFloat(panelStyles.paddingBottom) || 0;
+  const innerPanelWidth = Math.max(1, panelWidth - (Number.parseFloat(panelStyles.paddingLeft) || 0) - (Number.parseFloat(panelStyles.paddingRight) || 0));
+  const probe = document.createElement("div");
+  probe.className = genizahListEl.className;
+  probe.style.position = "absolute";
+  probe.style.visibility = "hidden";
+  probe.style.pointerEvents = "none";
+  probe.style.zIndex = "-1";
+  probe.style.width = `${innerPanelWidth}px`;
+  probe.style.height = "auto";
+  probe.style.maxHeight = "none";
+  probe.style.overflow = "visible";
+  probe.style.flex = "none";
+  if (genizahListEl.innerHTML.trim()) {
+    probe.innerHTML = genizahListEl.innerHTML;
+  } else {
+    probe.textContent = genizahListEl.textContent || "";
+  }
+  document.body.appendChild(probe);
+  const listHeight = Math.max(probe.scrollHeight || 0, probe.offsetHeight || 0);
+  probe.remove();
+  const neededHeight = panelPaddingTop + listHeight + panelPaddingBottom;
+
+  genizahPanelEl.style.width = prevPanelWidth;
+  genizahPanelEl.style.maxWidth = prevPanelMaxWidth;
+  genizahListEl.style.height = prevListHeight;
+  genizahListEl.style.maxHeight = prevListMaxHeight;
+  genizahListEl.style.overflow = prevListOverflow;
+
+  for (let rows = 1; rows <= computedMaxRows; rows += 1) {
+    const spanHeight = rows * rowTrack + (rows - 1) * rowGap;
+    if (spanHeight >= neededHeight) return rows;
+  }
+
+  return computedMaxRows;
+}
+
 function saveLayout(layout) {
   try {
     localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(layout));
@@ -523,7 +901,7 @@ function loadStoredLayout() {
     if (!raw) return cloneLayout(DEFAULT_LAYOUT);
     const parsed = JSON.parse(raw);
     const candidate = cloneLayout(parsed);
-    const check = validateLayout(candidate);
+    const check = validateLayout(candidate, ["controls", ...getVisibleDataWidgetIds()]);
     if (!check.ok) return cloneLayout(DEFAULT_LAYOUT);
     return candidate;
   } catch {
@@ -777,6 +1155,7 @@ function saveDisplaySettings() {
 function applyDisplaySettingsToUi() {
   document.body.classList.toggle("settings-rashi-script", Boolean(displaySettings.rashiFont));
   if (commentaryPanelEl instanceof HTMLElement) commentaryPanelEl.hidden = !displaySettings.showCommentary;
+  if (manuscriptPanelEl instanceof HTMLElement) manuscriptPanelEl.hidden = !genizahModeEnabled;
   if (halakhaPanelEl instanceof HTMLElement) halakhaPanelEl.hidden = !displaySettings.showHalakha;
   if (tanakhPanelEl instanceof HTMLElement) tanakhPanelEl.hidden = !displaySettings.showTanakh;
   if (genizahPanelEl instanceof HTMLElement) genizahPanelEl.hidden = !displaySettings.showGenizah;
@@ -789,6 +1168,13 @@ function syncSettingsModalFromState() {
 }
 
 function applySettingsFromModal() {
+  if (genizahModeEnabled) {
+    genizahModeEnabled = false;
+    preGenizahModeDisplaySettings = null;
+    clearManuscriptImage();
+    syncGenizahModeButton();
+  }
+
   const prevVisibility = {
     showCommentary: Boolean(displaySettings.showCommentary),
     showHalakha: Boolean(displaySettings.showHalakha),
@@ -1682,6 +2068,19 @@ function buildRef() {
   return `${tractateSelect.value}.${dafSelect.value}`;
 }
 
+async function navigateDafByStep(step) {
+  const delta = Number(step);
+  if (!Number.isFinite(delta) || !delta || !(dafSelect instanceof HTMLSelectElement)) return;
+  const options = Array.from(dafSelect.options || []);
+  if (!options.length) return;
+  const currentIndex = options.findIndex((opt) => opt.value === dafSelect.value);
+  if (currentIndex < 0) return;
+  const nextIndex = Math.max(0, Math.min(options.length - 1, currentIndex + delta));
+  if (nextIndex === currentIndex) return;
+  dafSelect.value = options[nextIndex].value;
+  await loadRef(buildRef());
+}
+
 function fitSelectWidthToOptions(selectEl) {
   if (!(selectEl instanceof HTMLSelectElement) || !selectMeasureCtx) return;
   const style = window.getComputedStyle(selectEl);
@@ -2202,16 +2601,19 @@ function renderGenizahForSegment(segmentIndex) {
   lastGenizahSegmentIndex = segmentIndex || null;
   if (!segmentIndex) {
     genizahListEl.textContent = "רחף מעל משפט בגמרא כדי לראות חילופי נוסח.";
+    if (displaySettings.showGenizah || genizahModeEnabled) applyLayout(currentLayout);
     return;
   }
   if (!genizahGroups.length) {
     genizahListEl.textContent = "לא נטענו נתוני הכי גרסינן. התחבר למערכת בחלק העליון.";
+    if (displaySettings.showGenizah || genizahModeEnabled) applyLayout(currentLayout);
     return;
   }
 
   const group = pickGenizahGroupForSegment(segmentIndex);
   if (!group) {
     genizahListEl.textContent = "לא נמצאה קבוצת נוסח מתאימה למשפט זה.";
+    if (displaySettings.showGenizah || genizahModeEnabled) applyLayout(currentLayout);
     return;
   }
 
@@ -2241,6 +2643,7 @@ function renderGenizahForSegment(segmentIndex) {
     wrap.appendChild(card);
   }
   genizahListEl.appendChild(wrap);
+  if (displaySettings.showGenizah || genizahModeEnabled) applyLayout(currentLayout);
 }
 
 function ensureGenizahLightbox() {
@@ -2639,6 +3042,7 @@ async function loadRef(rawRef) {
   if (!ref) return;
 
   setStatus(`טוען ${ref}...`);
+  clearManuscriptImage();
   currentRef = ref;
   openSefariaEl.href = `https://www.sefaria.org/${encodeURIComponent(ref)}`;
 
@@ -2725,6 +3129,22 @@ if (dafYomiBtn instanceof HTMLButtonElement) {
   });
 }
 
+if (prevDafBtn instanceof HTMLButtonElement) {
+  prevDafBtn.addEventListener("click", () => {
+    void navigateDafByStep(-1).catch((error) => {
+      setStatus(`הטעינה נכשלה: ${error.message}`);
+    });
+  });
+}
+
+if (nextDafBtn instanceof HTMLButtonElement) {
+  nextDafBtn.addEventListener("click", () => {
+    void navigateDafByStep(1).catch((error) => {
+      setStatus(`הטעינה נכשלה: ${error.message}`);
+    });
+  });
+}
+
 segmentsEl.addEventListener("mouseover", (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
@@ -2789,7 +3209,9 @@ genizahListEl.addEventListener("click", (event) => {
   const src = link.dataset.lightboxSrc || link.getAttribute("href") || "";
   if (!src) return;
   event.preventDefault();
-  openGenizahLightbox(src);
+  const witnessTitle = link.closest(".ref-title")?.querySelector("span")?.textContent?.trim() || "";
+  setGenizahModeEnabled(true);
+  showManuscriptImage(src, witnessTitle);
 });
 
 genizahLoginForm.addEventListener("submit", (event) => {
@@ -2832,6 +3254,14 @@ if (layoutResetBtn instanceof HTMLButtonElement) {
     saveLayout(currentLayout);
   });
 }
+
+if (genizahModeBtn instanceof HTMLButtonElement) {
+  genizahModeBtn.addEventListener("click", () => {
+    setGenizahModeEnabled(!genizahModeEnabled);
+  });
+}
+
+initManuscriptInteractions();
 
 if (layoutEditToggleBtn instanceof HTMLButtonElement) {
   layoutEditToggleBtn.addEventListener("click", () => {
@@ -2885,6 +3315,8 @@ window.addEventListener("keydown", (event) => {
 });
 
 setLayoutEditMode(false);
+syncGenizahModeButton();
+clearManuscriptImage();
 
 let pendingLayoutResizeRaf = 0;
 window.addEventListener("resize", () => {

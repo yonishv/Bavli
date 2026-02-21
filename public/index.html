@@ -17,14 +17,17 @@
 
           <label for="dafSelect">דף</label>
           <select id="dafSelect" name="daf"></select>
+          <button id="prevDafBtn" type="button" class="daf-nav-btn">עמוד קודם</button>
+          <button id="nextDafBtn" type="button" class="daf-nav-btn">עמוד הבא</button>
           <button id="dafYomiBtn" type="button" class="daf-yomi-btn">דף יומי</button>
 
           <button id="layoutEditToggleBtn" type="button" class="layout-edit-toggle-btn">שינוי פריסה</button>
           <button id="layoutSaveBtn" type="button" class="layout-save-btn" hidden>שמירת פריסה</button>
           <button id="layoutResetBtn" type="button" class="layout-reset-btn">איפוס פריסה</button>
+          <button id="genizahModeBtn" type="button" class="genizah-mode-btn">הכי גרסינן</button>
           <button id="settingsBtn" type="button" class="settings-btn">הגדרות</button>
-          <span class="controls-credit">פותח על ידי יוני שויקה באמצעות קודקס ג׳יפיטי. לתגובות והערות: <a href="mailto:shveka@gmail.com">shveka@gmail.com</a> | באתר זה נעשה שימוש בטקסטים וב-API של <a href="https://www.sefaria.org.il/texts" target="_blank" rel="noreferrer"><strong>ספריא</strong></a> ותודתי נתונה להם.</span>
         </form>
+        <div class="controls-credit">פותח על ידי יוני שויקה באמצעות קודקס ג׳יפיטי. לתגובות והערות: <a href="mailto:shveka@gmail.com">shveka@gmail.com</a> | באתר זה נעשה שימוש בטקסטים וב-API של <a href="https://www.sefaria.org.il/texts" target="_blank" rel="noreferrer"><strong>ספריא</strong></a> ותודתי נתונה להם.</div>
         <form id="genizahLoginForm" class="controls genizah-auth-form" autocomplete="off">
           <span class="auth-label">התחברות להכי גרסינן</span>
           <div class="genizah-credentials">
@@ -51,6 +54,21 @@
         </div>
         <div id="textMeta" class="text-meta"></div>
         <div id="segments" class="segments"></div>
+      </section>
+
+      <section class="panel manuscript-panel panel-widget" data-widget-id="manuscript" hidden>
+        <div class="panel-title-row">
+          <h2 id="manuscriptTitle">תמונת כתב יד</h2>
+        </div>
+        <p id="manuscriptEmpty" class="manuscript-empty">לחץ על סמל התמונה בחלון הכי גרסינן כדי להציג צילום כתב יד.</p>
+        <div id="manuscriptFrame" class="manuscript-frame" hidden>
+          <div class="manuscript-toolbar" role="group" aria-label="כלי זום לתמונת כתב יד">
+            <button id="manuscriptZoomOutBtn" type="button" aria-label="הקטנה">−</button>
+            <button id="manuscriptZoomInBtn" type="button" aria-label="הגדלה">+</button>
+            <button id="manuscriptResetBtn" type="button" aria-label="איפוס זום">100%</button>
+          </div>
+          <img id="manuscriptImage" class="manuscript-image" alt="תמונת כתב יד מהכי גרסינן" />
+        </div>
       </section>
 
       <section class="panel halakha-panel panel-widget" data-widget-id="halakha">

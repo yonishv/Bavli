@@ -200,6 +200,14 @@ body.genizah-connected .layout {
   background: linear-gradient(120deg, #2d7f61 0%, #44a07c 100%);
 }
 
+.genizah-mode-btn {
+  background: linear-gradient(120deg, #7b5a1b 0%, #9f7a33 100%);
+}
+
+.genizah-mode-btn.active {
+  background: linear-gradient(120deg, #1f5f7a 0%, #387e9b 100%);
+}
+
 .settings-btn {
   background: linear-gradient(120deg, #3a4f86 0%, #5874b0 100%);
 }
@@ -216,14 +224,12 @@ body.genizah-connected .layout {
 }
 
 .controls-credit {
-  margin-inline-start: auto;
+  margin-top: 8px;
   text-align: right;
   font-size: 0.88rem;
   color: var(--muted);
   line-height: 1.4;
-  white-space: nowrap;
-  min-width: max-content;
-  flex: 0 0 auto;
+  white-space: normal;
 }
 
 .controls-credit a {
@@ -233,7 +239,7 @@ body.genizah-connected .layout {
 
 @media (max-width: 1280px) {
   .controls-credit {
-    margin-inline-start: auto;
+    margin-top: 8px;
   }
 }
 
@@ -255,7 +261,6 @@ body.genizah-connected .layout {
   }
 
   .controls-credit {
-    min-width: max-content;
     font-size: 0.82rem;
   }
 }
@@ -531,6 +536,76 @@ button:hover {
   background: linear-gradient(180deg, #fffaf1 0%, #fff 100%);
 }
 
+.manuscript-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.manuscript-panel .panel-title-row {
+  margin-bottom: 8px;
+}
+
+.manuscript-empty {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.manuscript-frame {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid #dbcbb2;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f4f2ec 0%, #ece7dc 100%);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  position: relative;
+}
+
+.manuscript-toolbar {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.manuscript-toolbar button {
+  min-width: 36px;
+  height: 30px;
+  border: 1px solid rgba(29, 42, 58, 0.26);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #2a3542;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.manuscript-image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(26, 31, 40, 0.24);
+  transition: transform 120ms ease-out;
+  cursor: zoom-in;
+  user-select: none;
+}
+
+.manuscript-image.is-dragging {
+  transition: none;
+  cursor: grabbing;
+}
+
 .segments {
   flex: 1;
   min-height: 0;
@@ -541,7 +616,7 @@ button:hover {
 .fluent-text {
   direction: rtl;
   text-align: right;
-  line-height: 1.95;
+  line-height: 1.75;
   font-size: 1.22rem;
   font-family: "Frank Ruhl Libre", "Times New Roman", serif;
   background: #fff;
@@ -562,7 +637,7 @@ button:hover {
 .steinsaltz-inline {
   display: inline;
   font-size: 0.8em;
-  line-height: 1.8;
+  line-height: 1.6;
   color: #4e596e;
 }
 
@@ -718,7 +793,7 @@ button.chip:disabled {
 .genizah-witness .ref-text {
   flex: 1;
   min-height: 0;
-  max-height: 160px;
+  max-height: none;
   overflow-y: auto;
   padding-left: 4px;
 }
@@ -842,7 +917,7 @@ body.lightbox-open {
   margin: 0;
   direction: rtl;
   text-align: right;
-  line-height: 1.6;
+  line-height: 1.32;
 }
 
 body.settings-rashi-script .commentary-panel .ref-text,
@@ -864,7 +939,7 @@ body.settings-rashi-script .commentary-panel .quote-box {
 
 .tanakh-panel .ref-text {
   font-family: "Noto Serif Hebrew", "SBL Hebrew", "Ezra SIL", "Frank Ruhl Libre", serif;
-  line-height: 1.75;
+  line-height: 1.6;
 }
 
 .rashi-piece {
